@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>South Park RP - 2D School Days</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    background: #1a3a5c url('') ;
+    background: linear-gradient(#87CEEB 0%, #87CEEB 35%, #5a8f3e 35%, #4a7a33 100%);
+    font-family: 'Fredoka', 'Comic Sans MS', sans-serif;
+    display:flex; align-items:center; justify-content:center;
+    min-height:100vh; color:#111; overflow:hidden;
+  }
+  body::before{
+    content:''; position:fixed; inset:0; pointer-events:none;
+    background-image: radial-gradient(white 3px, transparent 4px);
+    background-size: 180px 90px; opacity:.35;
+  }
+  #frame {
+    width:1024px; max-width:98vw;
+    background:#111; border:8px solid #111; border-radius:18px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.6), inset 0 0 0 4px #333;
+    overflow:hidden; position:relative; z-index:1;
+  }
+  #topbar {
+    background:#111; color:#fff; display:flex; align-items:center; gap:12px;
+    padding:8px 14px; font-weight:700; letter-spacing:.5px;
+  }
+  #topbar .logo {
+    background:#ffcc00; color:#111; padding:2px 12px; border-radius:10px;
+    transform:rotate(-2deg); border:3px solid #000; font-size:18px;
+  }
+  #topbar small { font-weight:400; opacity:.7; }
+  #hud {
+    display:flex; gap:8px; align-items:center; margin-left:auto;
+    font-size:13px;
+  }
+  #hud .pill { background:#222; border:2px solid #444; border-radius:20px; padding:3px 12px; color:#fff; }
+  #pill-time { background:#ffcc00 !important; color:#111 !important; border-color:#000 !important; font-weight:700; }
+  #stage { position:relative; width:100%; height:600px; background:#a8d8f0; overflow:hidden; }
+  canvas { width:100%; height:100%; display:block; image-rendering:auto; }
+  /* Screens */
+  .screen {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,30,50,.85); z-index:20; padding:20px;
+  }
+  .hidden { display:none !important; }
+  .panel {
+    background:#fffef5; border:5px solid #000; border-radius:18px;
+    width:860px; max-width:95%; max-height:95%; overflow:auto;
+    padding:22px 24px; box-shadow:8px 8px 0 #000;
+  }
+  .panel h1 { font-size:42px; line-height:.9; letter-spacing:-1px; }
+  .panel h1 span { background:#ffcc00; padding:0 10px; border:3px solid #000; border-radius:10px; display:inline-block; transform:rotate(-1.5deg); }
+  .panel h2 { font-size:24px; margin:6px 0 10px; }
+  .panel p { font-size:15px; margin:6px 0; }
+  .btnrow { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+  button {
+    font-family:inherit; font-weight:700; font-size:16px;
+    border:3px solid #000; border-radius:12px; padding:10px 18px;
+    cursor:pointer; box-shadow:3px 3px 0 #000; transition:.1s;
+  }
+  button:hover { transform:translate(-1px,-1px); box-shadow:4px 4px 0 #000; }
+  button:active { transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  .btn-yellow { background:#ffcc00; } .btn-green { background:#7ed957; }
+  .btn-blue { background:#5eb1ef; color:#fff; text-shadow:1px 1px 0 #000; }
+  .btn-pink { background:#ff8fb2; } .btn-red { background:#ff5a5a; color:#fff; text-shadow:1px 1px 0 #000;}
+  .btn-dark { background:#111; color:#fff; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:10px; }
+  .opt-group { background:#f3f0e2; border:3px solid #000; border-radius:12px; padding:10px; }
+  .opt-group h3 { font-size:15px; margin-bottom:8px; text-transform:uppercase; letter-spacing:.5px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .chip {
+    border:2.5px solid #000; border-radius:20px; padding:5px 12px; font-size:14px; font-weight:600;
+    background:#fff; cursor:pointer; user-select:none;
+  }
+  .chip.sel { background:#111; color:#fff; }
+  .chip:hover { background:#ffcc00; } .chip.sel:hover { background:#111; }
+  input[type=text] {
+    font-family:inherit; font-size:18px; font-weight:700; padding:8px 12px;
+    border:3px solid #000; border-radius:10px; width:100%;
+  }
+  label.small { font-size:12px; font-weight:700; text-transform:uppercase; opacity:.7; }
+  /* canon cards */
+  #canonGrid { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-top:12px; max-height:360px; overflow:auto; padding:4px;}
+  .canon-card {
+    border:3px solid #000; border-radius:12px; background:#fff; padding:8px; text-align:center; cursor:pointer;
+  }
+  .canon-card:hover { background:#fff7b0; transform:scale(1.03); }
+  .canon-card.sel { background:#ffcc00; outline:4px solid #5eb1ef; }
+  .canon-card canvas { width:100%; height:90px; background:#cfeaf5; border-radius:8px; border:2px solid #000;}
+  .canon-card b { display:block; font-size:14px; margin-top:4px; }
+  .canon-card i { font-size:11px; font-style:normal; opacity:.7; display:block; line-height:1.2;}
+  /* dialogue */
+  #dlg {
+    position:absolute; left:50%; transform:translateX(-50%); bottom:14px; width:94%;
+    background:#fffef5; border:4px solid #000; border-radius:14px; box-shadow:5px 5px 0 #000;
+    display:flex; gap:12px; padding:10px 14px; z-index:15; min-height:110px;
+  }
+  #dlgPortrait { width:84px; height:84px; background:#bfe3f2; border:3px solid #000; border-radius:12px; flex-shrink:0; }
+  #dlgBody { flex:1; }
+  #dlgName { font-weight:800; font-size:16px; background:#111; color:#fff; display:inline-block; padding:1px 10px; border-radius:8px; margin-bottom:4px;}
+  #dlgText { font-size:16px; line-height:1.35; min-height:44px; }
+  #dlgHint { font-size:11px; opacity:.6; font-weight:700; margin-top:4px; }
+  /* toast / objective */
+  #objective {
+    position:absolute; top:10px; left:50%; transform:translateX(-50%);
+    background:#111; color:#ffcc00; font-weight:700; font-size:14px;
+    padding:6px 16px; border-radius:20px; border:3px solid #ffcc00; z-index:10;
+    white-space:nowrap;
+  }
+  #controlsHelp {
+    position:absolute; top:10px; left:10px; background:rgba(255,255,255,.92);
+    border:3px solid #000; border-radius:10px; padding:6px 10px; font-size:12px; font-weight:600; z-index:10; line-height:1.4;
+  }
+  #relBoard {
+    position:absolute; top:10px; right:10px; background:rgba(255,255,255,.94);
+    border:3px solid #000; border-radius:10px; padding:6px 10px; font-size:11px; z-index:10; width:190px;
+  }
+  #relBoard b { font-size:12px; }
+  #toast {
+    position:absolute; top:64px; left:50%; transform:translateX(-50%);
+    background:#7ed957; border:3px solid #000; border-radius:12px; padding:6px 14px;
+    font-weight:700; z-index:11; display:none;
+  }
+  #previewWrap { display:flex; gap:14px; align-items:center; }
+  #previewCanvas { width:180px; height:180px; background:#bfe3f2; border:4px solid #000; border-radius:14px; }
+  kbd { background:#111; color:#fff; border-radius:6px; padding:1px 7px; font-family:inherit; font-size:11px; }
+  .note { background:#fff7b0; border:2px dashed #000; border-radius:10px; padding:8px 10px; font-size:13px; margin-top:10px;}
+  @media(max-width:800px){ .grid2{grid-template-columns:1fr;} #canonGrid{grid-template-columns:repeat(2,1fr);} #stage{height:520px;} }
+</style>
+</head>
+<body>
+<div id="frame">
+  <div id="topbar">
+    <div class="logo">SOUTH PARK RP</div>
+    <small>fan-made 2D school-days RP • desktop • WASD + E</small>
+    <div id="hud">
+      <div class="pill" id="pill-who">—</div>
+      <div class="pill" id="pill-time">8:00 AM</div>
+      <div class="pill" id="pill-map">Bus Stop</div>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="1008" height="600"></canvas>
+    <div id="objective">🚌 Welcome to South Park!</div>
+    <div id="controlsHelp"><kbd>WASD</kbd>/<kbd>←↑↓→</kbd> walk &nbsp; <kbd>E</kbd> talk / use &nbsp; <kbd>SPACE</kbd> next line<br>↵ doors glow yellow — walk in!</div>
+    <div id="relBoard"><b>💘 Canon couples</b><br>💙 Craig x Tweek (dating)<br>💗 Stan x Wendy (on/off)<br>💜 Tolkien x Nichole (dating)<br>💔 Cartman x Heidi (ex)<br>💔 Clyde x Bebe (ex)</div>
+    <div id="toast"></div>
+
+    <div id="dlg" class="hidden">
+      <canvas id="dlgPortrait" width="84" height="84"></canvas>
+      <div id="dlgBody">
+        <div id="dlgName">???</div>
+        <div id="dlgText"></div>
+        <div id="dlgHint">[ SPACE / E / click ] to continue ▶</div>
+      </div>
+    </div>
+
+    <!-- TITLE -->
+    <div id="scr-title" class="screen">
+      <div class="panel" style="text-align:center">
+        <h1>SOUTH <span>PARK</span> RP</h1>
+        <h2>🏫 2D School-Days Roleplay</h2>
+        <p>Play as <b>Stan, Kyle, Cartman, Kenny, Butters, Craig, Tweek, Wendy…</b> or make your <b>own New Kid</b> with your own mom & dad (or just mom!), race, gender, hair & twitch!</p>
+        <p style="opacity:.7">Free-roam: Bus Stop → Playground → Hallway → Classroom → Cafeteria (lunch!) → Home. Everyone talks. Every hero has unique lines. Canon couples hold hands.</p>
+        <div class="btnrow" style="justify-content:center">
+          <button class="btn-yellow" id="btnGoCanon">⭐ Play as a Canon Kid</button>
+          <button class="btn-green" id="btnGoCreate">🧒 Make My Own Character</button>
+        </div>
+        <div class="note">Fan parody. South-Park-style paper cutout art drawn live in code — big heads, beady eyes, mitten hands, flap mouths, waddle-walk. Movement: slow waddle + bounce like classic 2D kindergarten RPGs.</div>
+        <p style="font-size:12px;opacity:.6;margin-top:8px">Desktop: keyboard required. Sound: none (respectfully quiet, like Kenny's hood).</p>
+      </div>
+    </div>
+
+    <!-- CANON SELECT -->
+    <div id="scr-canon" class="screen hidden">
+      <div class="panel">
+        <h2>⭐ Choose your Canon Kid</h2>
+        <p>Each kid has <b>totally different dialogue</b>. NPCs react to WHO you are. Creek (Craig x Tweek) is canon dating here!</p>
+        <div id="canonGrid"></div>
+        <div class="btnrow">
+          <button class="btn-dark" id="btnBack1">← Back</button>
+          <button class="btn-yellow" id="btnStartCanon">Start School Day ▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CREATOR -->
+    <div id="scr-create" class="screen hidden">
+      <div class="panel">
+        <h2>🧒 Make Your Own New Kid</h2>
+        <div style="display:flex; gap:16px; flex-wrap:wrap">
+          <div style="flex:1; min-width:280px">
+            <label class="small">Kid's first name</label>
+            <input type="text" id="inName" value="Alex" maxlength="14">
+            <div class="grid2">
+              <div class="opt-group"><h3>Race</h3><div class="chips" id="chRace"></div></div>
+              <div class="opt-group"><h3>Gender</h3><div class="chips" id="chGender"></div></div>
+              <div class="opt-group"><h3>Hair (laid flat)</h3><div class="chips" id="chHair"></div></div>
+              <div class="opt-group"><h3>Hair color</h3><div class="chips" id="chHairC"></div></div>
+              <div class="opt-group"><h3>Family</h3><div class="chips" id="chFam"></div></div>
+              <div class="opt-group"><h3>Quirk</h3><div class="chips" id="chQuirk"></div></div>
+              <div class="opt-group"><h3>Shirt</h3><div class="chips" id="chShirt"></div></div>
+              <div class="opt-group"><h3>Pants</h3><div class="chips" id="chPants"></div></div>
+            </div>
+            <div class="note" id="creatorNote">If race = <b>Black</b>, you get the <b>simple short afro</b> style — just like you asked! Twitch quirk = Tweek-like shaking + “GAAH! Too much pressure!”</div>
+            <div class="btnrow">
+              <button class="btn-dark" id="btnBack2">← Back</button>
+              <button class="btn-green" id="btnStartCustom">First Day of School ▶</button>
+            </div>
+          </div>
+          <div style="text-align:center">
+            <canvas id="previewCanvas" width="180" height="180"></canvas>
+            <p style="font-weight:700" id="previewLabel">New Kid</p>
+            <p style="font-size:12px;opacity:.7">live paper-cutout preview<br>waddle test →</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   SOUTH PARK RP — 2D School Days
+   Single-file fan parody RPG. All art procedural (paper cutout).
+   ============================================================ */
+const cv = document.getElementById('game');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+
+const SKIN = {
+  white:  '#ffcc99', lightwhite:'#f6d3a8',
+  black:  '#8d5524', black2:'#6e4420', blacklight:'#a06a42',
+  asian:  '#ffdbac', latino:'#e3ab7e', native:'#d9a06b'
+};
+const RACE_SKIN = { 'White':'#ffcc99', 'Black':'#8d5524', 'Asian':'#ffdbac', 'Latino':'#e3ab7e', 'Native':'#d9a06b' };
+
+/* ---------------- CANON CAST ---------------- */
+const CANON = [
+ {id:'stan', name:'Stan Marsh', short:'Stan', gender:'Boy', skin:'#ffcc99', hat:'flap', hatColor:'#3862a6', pom:'#c1272d', hair:'black', jacket:'#6b4a2f', shirt:'#6b4a2f', pants:'#2f4a7a', gloves:'#c1272d', rel:'Wendy (on/off)', desc:'Blue hat + red pom. Wendy\'s boyfriend-ish.'},
+ {id:'kyle', name:'Kyle Broflovski', short:'Kyle', gender:'Boy', skin:'#ffcc99', hat:'ushanka', hatColor:'#3fa34d', hair:'red-afro', jacket:'#e67e22', pants:'#2f6b2f', gloves:'#3fa34d', rel:'Single (Super Best Friends)', desc:'Green ushanka. Moral center, Cartman target.'},
+ {id:'cartman', name:'Eric Cartman', short:'Cartman', gender:'Boy', skin:'#ffcc99', hat:'beanie', hatColor:'#7a4a2b', hair:'brown', jacket:'#c1272d', pants:'#5a2d2d', gloves:'#6ad0e8', rel:'Ex: Heidi Turner', desc:'Red jacket. Respect his authoritah!'},
+ {id:'kenny', name:'Kenny McCormick', short:'Kenny', gender:'Boy', skin:'#ffcc99', hat:'parka', hatColor:'#e67e22', hair:'blond', jacket:'#e67e22', pants:'#5a3a1a', gloves:'#7a4a2b', rel:'Single (poor, muffled)', desc:'Orange parka. Mmph rmph mmph!'},
+ {id:'butters', name:'Butters Stotch', short:'Butters', gender:'Boy', skin:'#ffcc99', hat:'hair', hairColor:'#f2e08a', hair:'laid-blond', jacket:'#7ec8e3', pants:'#2f6b4a', gloves:'#7ec8e3', rel:'Ex-ish: Charlotte (Canada)', desc:'Sweet, gullible. Oh hamburgers!'},
+ {id:'craig', name:'Craig Tucker', short:'Craig', gender:'Boy', skin:'#ffcc99', hat:'chullo', hatColor:'#3862a6', hair:'black', jacket:'#3862a6', pants:'#222', gloves:'#c1272d', rel:'💙 Dating Tweek!', desc:'Blue chullo. Flips people off. Tweek\'s boyfriend.'},
+ {id:'tweek', name:'Tweek Tweak', short:'Tweek', gender:'Boy', skin:'#ffcc99', hat:'hair', hair:'messy-blond', hairColor:'#e8d878', jacket:'#3fa34d', shirtC:'#dfe8b0', pants:'#2f4a7a', gloves:'#3fa34d', rel:'💙 Dating Craig!', desc:'Twitchy, coffee. Craig\'s boyfriend. GAH!'},
+ {id:'token', name:'Tolkien Black', short:'Tolkien', gender:'Boy', skin:'#8d5524', hat:'hair', hair:'short-afro', hairColor:'#141414', jacket:'#c1272d', pants:'#3862a6', gloves:'#c1272d', rel:'💜 Dating Nichole!', desc:'Rich, chill. Don\'t call him Token.'},
+ {id:'clyde', name:'Clyde Donovan', short:'Clyde', gender:'Boy', skin:'#ffcc99', hat:'hair', hair:'laid-brown', hairColor:'#5a2d1a', jacket:'#8e2f32', pants:'#333', gloves:'#8e2f32', rel:'Ex: Bebe', desc:'Cries, poops pants. Loyal bro.'},
+ {id:'wendy', name:'Wendy Testaburger', short:'Wendy', gender:'Girl', skin:'#ffcc99', hat:'beret', hatColor:'#ff8fb2', hair:'laid-black', hairColor:'#1a1a1a', jacket:'#ff8fb2', pants:'#5a3a6b', gloves:'#ff8fb2', rel:'💗 Stan (on/off)', desc:'Pink beret. Smartest in class. Stan\'s girl.'},
+ {id:'bebe', name:'Bebe Stevens', short:'Bebe', gender:'Girl', skin:'#ffcc99', hat:'hair', hair:'laid-blond-long', hairColor:'#f2e08a', jacket:'#c1272d', pants:'#333', gloves:'#c1272d', rel:'Ex: Clyde', desc:'Blond, popular. Boobs ruined everything once.'},
+ {id:'nichole', name:'Nichole Daniels', short:'Nichole', gender:'Girl', skin:'#6e4420', hat:'hair', hair:'laid-black-long', hairColor:'#141414', jacket:'#8e44ad', pants:'#333', gloves:'#8e44ad', rel:'💜 Dating Tolkien!', desc:'Cheerleader. Tolkien\'s girlfriend.'},
+ {id:'jimmy', name:'Jimmy Valmer', short:'Jimmy', gender:'Boy', skin:'#ffcc99', hat:'hair', hair:'laid-brown', hairColor:'#6b3a1a', jacket:'#e8c53a', pants:'#5a4a2a', gloves:'#e8c53a', crutches:true, rel:'Single (comedian)', desc:'C-c-comedy! Crutches. Great guy.'},
+ {id:'heidi', name:'Heidi Turner', short:'Heidi', gender:'Girl', skin:'#ffcc99', hat:'hair', hair:'laid-brown-long', hairColor:'#6b3a1a', jacket:'#3fa34d', pants:'#333', gloves:'#3fa34d', rel:'Ex: Cartman (never again)', desc:'Sweet, done with Cartman forever.'},
+ {id:'timmy', name:'Timmy Burch', short:'Timmy', gender:'Boy', skin:'#ffcc99', hat:'wheelchair', hair:'laid-brown', hairColor:'#5a2d1a', jacket:'#c1272d', pants:'#222', gloves:'#c1272d', rel:'Single (TIMMY!)', desc:'TIMMY! Wheelchair. Legend.'},
+];
+function canonById(id){ return CANON.find(c=>c.id===id); }
+
+/* ---------------- DIALOGUE DATABASE ----------------
+   Every NPC: generic lines + newkid lines + per-hero specials */
+const DLG = {
+ stan:{ generic:["Dude, this town is so screwed up.","Kyle! Cartman stole my lunch AGAIN.","Wendy smiled at me today. BEST. DAY. EVER.","You wanna play Terrance & Phillip at recess?","My dad did WHAT on the news last night? Ugh."],
+  newkid:["Oh hey, you're the new kid! I'm Stan. Welcome to hell — I mean, South Park.","You just moved here? Dude, I'm sorry. This place is crazy.","Sit with us at lunch if you want. Kyle saves seats.","If Cartman is mean to you, just ignore him. Or kick him. Both work."],
+  as:{ kyle:["Dude!! My super best friend! What are we doing after school?","Kyle, tell them we're super best friends forever."],
+       cartman:["Dude, leave me alone, fatass.","Seriously Cartman, stop. Just... stop."],
+       wendy:["W-Wendy! Hi!! Uh... I mean... hey. ...Did I sound cool?","Wendy, do you wanna... hold hands at recess? Maybe?"],
+       kenny:["Kenny! No dying today, okay? Promise me."],
+       default:["Oh hey {you}! What's up?"] } },
+ kyle:{ generic:["Cartman is SUCH a fat racist jerk, I swear.","Did you do the math homework? I did extra credit.","Being Jewish in this town is... a whole thing.","Kick the baby! ...sorry, habit.","My mom is gonna kill me if I'm late again."],
+  newkid:["You're new, right? I'm Kyle. Don't listen to Cartman, he's ignorant.","New kid? Cool. Just so you know — Cartman will try to convert you. Don't.","Sit with us at lunch. We need normal people."],
+  as:{ stan:["Stan! Dude! My super best friend!","Stan, let's go to Casa Bonita if Cartman doesn't ruin it."],
+       cartman:["Shut UP, fatass! Nobody thinks you're funny!","Don't start with me today, Cartman. I will kick you in the balls."],
+       token:["Tolkien! You're the only sane rich kid here."],
+       default:["Hey {you}. What's going on?"] } },
+ cartman:{ generic:["Respect my authoritah!!","Screw you guys, I'm going home! ...Actually I'm staying for lunch.","Kyle's mom is a big fat... [censored by school].","I am NOT fat, I'm festively plump, BEANER— uh, I mean friend.","Cheesy poofs > everything. Fight me."],
+  newkid:["Oh great, ANOTHER poor new kid. Are you poor? You're probably poor.","New kid? Listen: you vote for ME for class president and I'll protect you. From Kyle.","You look poor. But you can be my friend. I'm very popular. VERY."],
+  as:{ kyle:["Kahl! You dirty Jew! Hahaha, got you!","Kyle, your mom— ...hi Mrs. Broflovski, I love you."],
+       stan:["Stan! Tell your Jew friend to shut up!"],
+       heidi:["Heidi... come on... I changed! I do crossfit now! ...Heidi?"],
+       wendy:["Wendy, you feminist... uh, I mean... hi."],
+       butters:["Butters! Come here, little buddy! I need a favor... a dumb, painful favor."],
+       default:["Oh, it's YOU, {you}. Whatever. I'm still cooler."] } },
+ kenny:{ generic:["Mmph mmph mmph! (That means: lunch is gonna kill me today.)","Mmmph rmph! (...You didn't hear that from me.)","Mph! Mph mmph! (...Casa Bonita, Friday, be there.)"],
+  newkid:["Mmph! Mmph mmph! (...New kid! I'm Kenny. Don't mind the hood.)","Mmmph rmph mph! (...Sit with us — you'll live longer. Probably.)"],
+  as:{ stan:["Mmph!! (Stan!! My best friend!!)","Mph mmph! (...Dude, don't let me die today.)"],
+       cartman:["Mmph. (Fatass.)"], kyle:["Mmph mmph! (...Kyle! Save me a seat!)"],
+       default:["Mmph {you}! (...Hey {you}! )"] } },
+ butters:{ generic:["Oh hamburgers! I forgot my lunch money AGAIN!","Do you wanna be in my secret club? It's just me. And now you!","My dad grounded me for having a scary face. Can you believe it?","Professor Chaos will get you! ...Kidding! Unless...?","Aw jeez, that test was harder than my dad's belt!"],
+  newkid:["Hiya new kid! I'm Butters! Wanna be best friends? Please?","You're new?! Oh boy! I'll show you where the good swings are!","My parents say I can't have new friends, but... they don't have to know!"],
+  as:{ cartman:["Oh jeez, Cartman... please don't make me do the thing again...","F-fellow... I mean... hi Cartman. Please be nice today?"],
+       stan:["Hi Stan! You're my favorite of the cool kids! Don't tell Kyle!"],
+       kenny:["Kenny! You wanna play with my ninja star? It's foam! Mostly!"],
+       default:["Oh hi {you}! Gee, it's swell to see ya!"] } },
+ craig:{ generic:["...What are you looking at?","Tweek! Stop twitching, everyone's staring. ...Okay, keep twitching, it's cute.","I flipped off the lunch lady. Worth detention.","...Whatever. ...Okay that was rude. Sorry.","Me and Tweek are going to the arcade. Don't follow us. ...Actually, come. Whatever."],
+  newkid:["...You're new. ...I'm Craig. ...That's it. ...Okay fine, welcome.","...New kid. Don't touch my stuff. ...Okay you can sit with us. Whatever."],
+  as:{ tweek:["Hey babe. ...I mean— HEY. You okay? Less coffee today, okay? *holds hand*","Tweek! Breathe. I'm right here. ...Love you, dude."],
+       token:["...Token. Sup."],
+       default:["...Hey {you}. ..."] } },
+ tweek:{ generic:["GAH! Too much pressure!! School! Lunch! EXISTING!","Coffee! I need coffee! The voices say the test is ALIVE!","Craig! CRAIG! There's a... a... GAH! ...Oh it's just a pencil. Okay.","Don't look at me! Okay look at me! GAH! No! Yes!","My parents put coffee in my sippy cup! IT'S THE ONLY WAY!"],
+  newkid:["GAH! A NEW KID?! New people! New germs! New— oh hi. I'm Tweek. Coffee?","You're new?! GAH! Don't be new at ME! ...Sorry. Hi. I'm Tweek."],
+  as:{ craig:["CRAIG!! You came! Okay! Okay okay okay! *twitch twitch* Hold my hand? Please? GAH— thank you.","Craig, I had THREE coffees! Is that too many?! Don't answer! Hold my hand!"],
+       token:["Tolkien! You're so calm! HOW?! Teach me! GAH!"],
+       default:["{you}!! GAH! Hi! Sorry! Hi!"] } },
+ token:{ generic:["Please. Call me Tolkien. My name is Tolkien.","Yeah, my parents are rich. No, you can't have money. Okay, maybe lunch money.","Me and Nichole are hitting the movies Friday. No Cartman allowed.","Baseball, piano, straight A's — being perfect is exhausting."],
+  newkid:["New kid? I'm Tolkien. Welcome. Ignore the stereotypes, just be cool.","Hey new kid. Sit with us if you want real food — I pack extra."],
+  as:{ nichole:["Hey baby. Saved you a seat. ...Yes, the good chocolate milk."],
+       cartman:["No, Cartman. You can't come to my house. Ever again."],
+       tweek:["Breathe, Tweek. In, out. ...Good. Craig's got you."],
+       default:["What's up, {you}?"] } },
+ clyde:{ generic:["I'm... I'm kinda hungry. And sad. Mostly sad.","Bebe dumped me. Again. I'm fine. *cries* I'M FINE!","Don't tell anyone I cried at lunch. ...You saw. Okay.","My mom packed me extra cookies! ...They're for Bebe. ...She's not coming. You want one?"],
+  newkid:["You're new? Cool. I'm Clyde. I cry sometimes. It's cool. ...It's not cool."],
+  as:{ bebe:["Bebe!! I saved you a cookie! ...Please don't dump me again? ...Okay."],
+       cartman:["Cartman, stop telling everyone I pooped my pants in 3rd grade!!"],
+       default:["Hey {you}."] } },
+ wendy:{ generic:["Stan, stop staring at me and eat your lunch! ...Oh, hi, sorry, habit.","Student council meets Thursday. Cartman is BANNED.","Bebe! Did you finish the book report? ...Boys never do.","I'm writing an essay on how sexist this cafeteria is. Want to sign?"],
+  newkid:["Hi! You must be new! I'm Wendy. Welcome to South Park Elementary!","New girl? New boy? New friend! I'm Wendy — ignore the boys, they're idiots. Mostly Stan. Kidding! Mostly."],
+  as:{ stan:["Stan!! You actually talked to me without vomiting! I'm so proud! ...Kiss at recess? Maybe."],
+       bebe:["Bebe!! Bestie!! Save me from these boys!"],
+       cartman:["Cartman, if you say ONE sexist thing today I swear—"],
+       nichole:["Nichole! Cheer practice after lunch?"],
+       default:["Hi {you}!"] } },
+ bebe:{ generic:["Wendy! Did you see Tolkien's shoes? Cute. Clyde's? ...No.","Boys are SO immature. Except Tolkien. And... no, just Tolkien.","My mom says I'm growing up too fast. Whatever, I want pizza."],
+  newkid:["Omg hi! New kid! I'm Bebe! Sit with me and Wendy, the boys smell.","You're cute for a new kid. Don't tell Wendy I said that."],
+  as:{ wendy:["Wendyyy! Bestie! Tell Stan to stop drooling!"],
+       clyde:["Clyde... we're OVER. ...Okay, I'll take the cookie though."],
+       nichole:["Nichole! Love the bow!"],
+       default:["Hey {you}!"] } },
+ nichole:{ generic:["Tolkien saved me a seat, but there's room for you too!","Cheer tryouts Friday! Wendy says I HAVE to go.","Cartman asked me out once. ONCE. Never again, honey."],
+  newkid:["Hi new kid! I'm Nichole! You seem sweet — sit with us!","Welcome! I'm Nichole — Tolkien's girlfriend, Wendy & Bebe's bestie!"],
+  as:{ token:["Tolkien!! My baby! *hug* You got the chocolate milk! I love you!"],
+       wendy:["Wendy! Girl! Council AND cheer? You're supermom!"],
+       default:["Hey {you}!"] } },
+ jimmy:{ generic:["W-want to hear a joke? What do you call a... a... fish with no eyes? A fsh!","C-c-comedy is my life! And crutches! Mostly comedy!","Timmy! My best friend! Say hi, Timmy!","I-I'm doing stand-up at lunch! Please don't throw food! ...Again."],
+  newkid:["H-hi new kid! I'm Jimmy! C-can I... can I tell you a joke? Please?","New friend! Want to hear my new bit? It's about lunch meat!"],
+  as:{ timmy:["TIMMY! My man! ...I mean... TIMMY!!"],
+       default:["Hey {you}! Great to s-s-see ya!"] } },
+ heidi:{ generic:["Cartman is NOT my boyfriend anymore. Please stop asking. Please.","I'm focusing on ME now. And snacks. Mostly snacks.","Wendy! Bebe! Nichole! Table for empowered girls?"],
+  newkid:["Oh hi! You're new! I'm Heidi! The boys are... a lot. Stick with the girls, okay?","Welcome, new kid! I'm Heidi — I'd hug you but... germs. Air hug!"],
+  as:{ cartman:["Eric. No. We're done. I said NO. ...Stop crying. ...No."],
+       wendy:["Wendy! Thank you for saving me from... him."],
+       default:["Hi {you}!"] } },
+ timmy:{ generic:["TIMMY!!!","Timmy! ...lunch! ...Timmy!","...Timmy live! ...Timmy eat!","TIMMY!!! ...*happy wheelchair spin*"],
+  newkid:["Timmy! ...New! ...Timmy friend! ...TIMMY!"],
+  as:{ jimmy:["Jimmy! ...TIMMY! ...friend!"], timmy:["TIMMY!!!"],
+       default:["{you}! ...TIMMY! ...friend!"] } },
+ garrison:{ generic:["Okay class, today we're doing... huh? Oh, lunch? Go to lunch I guess. 'Kay?","M'kay? M'kay.","Enough! Enough gay cowboy stuff, go eat!"],
+  newkid:["Oh, you must be the new kid. M'kay. Sit anywhere, just don't be gay— M'KAY, just sit."],
+  as:{ default:["{you}. Sit down. M'kay? Actually go to lunch. M'kay."] } },
+ mackey:{ generic:["M'kay, lunch is very important, m'kay? Drugs are bad, m'kay? But pizza is good, m'kay?","Are you okay, m'kay? That twitch — too much coffee, m'kay?"],
+  newkid:["New kid, m'kay? Welcome to school, m'kay? Don't do drugs, m'kay?"],
+  as:{ default:["Hello {you}, m'kay?"] } },
+ chef_mom:{ generic:["Hello there, child! Hungry? Chef's momma always feeds the babies!","Sweet child, you sit down and eat!"],
+  newkid:["Oh, a new baby! Come here, sugar! Extra gravy for you!"],
+  as:{ default:["Hey there, {you}, sugar!"] } },
+ mom:{ generic:["Sweetie! Did you eat? You look thin! Eat!","Be nice to the other kids! And don't swear!","Mommy loves you SO much!"],
+  newkid:[], as:{ default:["{you}, baby! How was school?"] } },
+ dad:{ generic:["Hey kiddo! How's school? Don't do what I did.","Your mother worries. I grill. That's the deal.","...Did you see the game? No? Okay."],
+  newkid:[], as:{ default:["Hey {you}!"] } },
+};
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function getDialogue(npcId, player){
+  const d = DLG[npcId];
+  if(!d) return ["...Hi."];
+  const you = player.isCustom ? player.cname : canonById(player.canonId).short;
+  const fmt = s => s.replaceAll('{you}', you);
+  // special per-hero
+  if(!player.isCustom){
+    const pid = player.canonId;
+    if(d.as && d.as[pid]) return d.as[pid].map(fmt);
+    if(d.as && d.as.default) return [fmt(pick(d.as.default))];
+  } else {
+    if(d.newkid && d.newkid.length && Math.random()<0.75) return [fmt(pick(d.newkid)), fmt(pick(d.generic))];
+  }
+  // relationship flavor appended sometimes
+  let line = fmt(pick(d.generic));
+  if((npcId==='craig'||npcId==='tweek') && Math.random()<0.35){
+    line += (player.isCustom ? " (He glances at his boyfriend and smiles.)" : " (He squeezes his boyfriend's hand.)");
+  }
+  return [line, fmt(pick(d.generic))];
+}
+
+/* ---------------- GAME STATE ---------------- */
+let player = {
+  isCustom:true, canonId:'stan', cname:'Alex',
+  race:'White', gender:'Boy', hair:'Laid flat', hairColor:'Brown',
+  family:'Mom + Dad', quirk:'None', shirt:'#5eb1ef', pants:'#333',
+  skin:'#ffcc99', x:80, y:420, vx:0, vy:0, dir:1, walk:0, moving:false,
+  twitchT:0, hasTray:false, ate:false, talked:Set ? new Set() : null,
+};
+player.talked = new Set();
+let creatorSel = { race:'White', gender:'Boy', hair:'Laid flat', hairColor:'Brown', family:'Mom + Dad', quirk:'None', shirt:'Blue', pants:'Dark' };
+const SHIRT_COLORS = {'Blue':'#5eb1ef','Red':'#c1272d','Green':'#3fa34d','Orange':'#e67e22','Pink':'#ff8fb2','Purple':'#8e44ad','Teal':'#2a9d8f'};
+const PANTS_COLORS = {'Dark':'#333','Blue':'#2f4a7a','Brown':'#5a3a1a','Green':'#2f6b2f','Gray':'#777'};
+
+let gameStarted=false, currentMap='bus', gameTime=8*60, // minutes
+    dlgQueue=[], dlgSpeaker=null, dlgActive=false, dlgCharI=0, dlgTimer=null;
+
+function playerLook(){
+  if(!player.isCustom){ const c=canonById(player.canonId); return {...c, skin:c.skin}; }
+  // custom look synthesized
+  let hair = 'laid';
+  if(creatorSel.race==='Black' && (creatorSel.hair==='Auto (afro)'||creatorSel.hair==='Laid flat')) hair='short-afro';
+  else if(creatorSel.hair==='Short afro') hair='short-afro';
+  else if(creatorSel.hair==='Messy (Tweek)') hair='messy-blond';
+  else if(creatorSel.hair==='Long') hair = player.gender==='Girl'||creatorSel.gender==='Girl' ? 'laid-black-long':'laid';
+  return {
+    name:player.cname, skin:RACE_SKIN[creatorSel.race]||'#ffcc99',
+    hat:'hair', hair:hair, hairColor: creatorSel.hairColor==='Black'?'#1a1a1a':creatorSel.hairColor==='Blond'?'#f2e08a':creatorSel.hairColor==='Red'?'#b33a1a':'#5a2d1a',
+    jacket:SHIRT_COLORS[creatorSel.shirt]||'#5eb1ef', pants:PANTS_COLORS[creatorSel.pants]||'#333',
+    gloves:SHIRT_COLORS[creatorSel.shirt]||'#5eb1ef', gender:creatorSel.gender
+  };
+}
+
+/* ---------------- MAPS ----------------
+   Each map: name, bg colors, walls (x,y,w,h), doors, npcs, props */
+const MAPS = {
+ bus:{ name:'Bus Stop', sub:'morning — talk, then head → to school',
+   walls:[{x:0,y:0,w:1008,h:20},{x:0,y:560,w:1008,h:40},{x:0,y:0,w:10,h:600},{x:998,y:0,w:10,h:600}],
+   doors:[{x:920,y:230,w:70,h:110,label:'→ SCHOOL',to:'outside'}],
+   props:[{t:'sign',x:140,y:200},{t:'bench',x:300,y:400},{t:'tree',x:700,y:150},{t:'tree',x:850,y:420}],
+   npcs:['cartman','kyle','jimmy'] },
+ outside:{ name:'Playground', sub:'recess! swings, ball, Creek holds hands',
+   walls:[{x:0,y:0,w:1008,h:60},{x:0,y:540,w:1008,h:60},{x:0,y:0,w:10,h:600},{x:998,y:0,w:10,h:600},{x:400,y:100,w:208,h:60}],
+   doors:[{x:440,y:100,w:120,h:50,label:'SCHOOL ↓',to:'hall'},{x:20,y:230,w:70,h:110,label:'← BUS',to:'bus'},{x:920,y:230,w:70,h:110,label:'HOME →',to:'home'}],
+   props:[{t:'school',x:400,y:20},{t:'swing',x:150,y:250},{t:'slide',x:700,y:300},{t:'tree',x:100,y:120},{t:'tree',x:880,y:120},{t:'ball',x:500,y:400}],
+   npcs:['craig','tweek','butters','clyde','nichole','token'] },
+ hall:{ name:'Hallway', sub:'classes left & right, cafeteria down',
+   walls:[{x:0,y:0,w:1008,h:90},{x:0,y:480,w:1008,h:120},{x:0,y:0,w:30,h:600},{x:978,y:0,w:30,h:600},{x:0,y:200,w:120,h:200},{x:888,y:200,w:120,h:200}],
+   doors:[{x:440,y:40,w:130,h:55,label:'CLASS ↑',to:'class'},{x:440,y:430,w:130,h:55,label:'LUNCH ↓',to:'cafe'},{x:20,y:250,w:60,h:100,label:'OUT ←',to:'outside'}],
+   props:[{t:'locker',x:160,y:90},{t:'locker',x:700,y:90},{t:'poster',x:480,y:90}],
+   npcs:['wendy','bebe','stan','mrs_garrison'] },
+ class:{ name:'Classroom 4th Grade', sub:'Mr. Garrison\'s class — sit, suffer, learn',
+   walls:[{x:0,y:0,w:1008,h:80},{x:0,y:520,w:1008,h:80},{x:0,y:0,w:30,h:600},{x:978,y:0,w:30,h:600}],
+   doors:[{x:440,y:500,w:130,h:50,label:'HALL ↓',to:'hall'}],
+   props:[{t:'board',x:300,y:80},{t:'desk',x:200,y:280},{t:'desk',x:420,y:280},{t:'desk',x:640,y:280},{t:'desk',x:310,y:390},{t:'desk',x:530,y:390}],
+   npcs:['garrison','heidi','timmy','kenny'] },
+ cafe:{ name:'Cafeteria', sub:'LUNCH! grab tray, sit, eat, gossip',
+   walls:[{x:0,y:0,w:1008,h:80},{x:0,y:520,w:1008,h:80},{x:0,y:0,w:30,h:600},{x:978,y:0,w:30,h:600}],
+   doors:[{x:440,y:500,w:130,h:50,label:'HALL ↑',to:'hall'}],
+   props:[{t:'counter',x:80,y:90},{t:'table',x:220,y:280},{t:'table',x:480,y:280},{t:'table',x:740,y:280},{t:'table',x:350,y:400},{t:'table',x:610,y:400}],
+   npcs:['chef_mom','mackey','cartman_lunch','kyle_lunch'] },
+ home:{ name:'Home', sub:'your family lives here',
+   walls:[{x:0,y:0,w:1008,h:80},{x:0,y:520,w:1008,h:80},{x:0,y:0,w:30,h:600},{x:978,y:0,w:30,h:600}],
+   doors:[{x:20,y:250,w:60,h:100,label:'← SCHOOL',to:'outside'}],
+   props:[{t:'house',x:380,y:90},{t:'couch',x:400,y:320},{t:'tree',x:120,y:140}],
+   npcs:['mom','dad'] },
+};
+// npc world instances: id -> {map, x,y, look override, wander}
+let npcs=[];
+function spawnNPCs(){
+  npcs=[];
+  const spots={
+   bus:[{x:300,y:350},{x:450,y:330},{x:600,y:360}],
+   outside:[{x:250,y:350},{x:310,y:350},{x:550,y:380},{x:700,y:350},{x:620,y:280},{x:560,y:290}],
+   hall:[{x:350,y:300},{x:500,y:300},{x:650,y:300},{x:200,y:350}],
+   class:[{x:500,y:200},{x:300,y:350},{x:650,y:350},{x:480,y:350}],
+   cafe:[{x:180,y:200},{x:800,y:200},{x:300,y:340},{x:560,y:340}],
+   home:[{x:450,y:350},{x:580,y:350}],
+  };
+  for(const mapId in MAPS){
+    (MAPS[mapId].npcs||[]).forEach((nid,idx)=>{
+      let look=null, dlgId=nid;
+      if(nid==='cartman_lunch'){ look=canonById('cartman'); dlgId='cartman'; }
+      if(nid==='kyle_lunch'){ look=canonById('kyle'); dlgId='kyle'; }
+      if(nid==='mrs_garrison'){ look={name:'Mr. Garrison',skin:'#ffcc99',hat:'hair',hair:'laid',hairColor:'#555',jacket:'#3fa34d',pants:'#555',gloves:'#3fa34d',gender:'Boy'}; dlgId='garrison'; }
+      if(nid==='chef_mom'){ look={name:'Lunch Lady',skin:'#e3ab7e',hat:'hairnet',hair:'laid',hairColor:'#333',jacket:'#fff',pants:'#555',gloves:'#fff',gender:'Girl'}; dlgId='chef_mom'; }
+      if(nid==='mackey'){ look={name:'Mr. Mackey',skin:'#ffcc99',hat:'hair',hair:'laid',hairColor:'#333',jacket:'#3862a6',pants:'#333',gloves:'#3862a6',gender:'Boy'}; dlgId='mackey'; }
+      if(nid==='mom'){ const nm = player.isCustom ? (player.cname+"'s Mom") : 'Mom'; look={name:nm,skin:player.isCustom?RACE_SKIN[creatorSel.race]:'#ffcc99',hat:'hair',hair:player.isCustom&&creatorSel.race==='Black'?'short-afro':'laid-black-long',hairColor:'#1a1a1a',jacket:'#ff8fb2',pants:'#5a3a6b',gloves:'#ff8fb2',gender:'Girl'}; dlgId='mom'; }
+      if(nid==='dad'){ if(player.isCustom && creatorSel.family==='Just Mom') return; const nm2 = player.isCustom ? (player.cname+"'s Dad") : 'Dad'; look={name:nm2,skin:player.isCustom?RACE_SKIN[creatorSel.race]:'#ffcc99',hat:'hair',hair:'laid',hairColor:'#3a2a1a',jacket:'#3862a6',pants:'#333',gloves:'#3862a6',gender:'Boy'}; dlgId='dad'; }
+      if(!look){ const c=canonById(nid); if(c) look=c; else return; }
+      // don't spawn the NPC that the player IS (avoid clone)
+      if(!player.isCustom && nid===player.canonId) return;
+      if(!player.isCustom && ((nid==='cartman_lunch'&&player.canonId==='cartman')||(nid==='kyle_lunch'&&player.canonId==='kyle'))) return;
+      const s=(spots[mapId]||[{x:400,y:350}])[idx % (spots[mapId]||[1]).length];
+      npcs.push({nid, dlgId, map:mapId, x:s.x+Math.random()*20, y:s.y+Math.random()*20, ox:s.x, oy:s.y, look, phase:Math.random()*6, wt:Math.random()*4, talking:0});
+    });
+  }
+}
+
+/* ---------------- INPUT ---------------- */
+const keys={};
+addEventListener('keydown',e=>{
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  keys[e.key.toLowerCase()]=true;
+  if(e.key===' '||e.key.toLowerCase()==='e'){ advanceDialogue(); tryInteract(); }
+});
+addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+cv.addEventListener('click',()=>{ advanceDialogue(); });
+
+function tryInteract(){
+  if(!gameStarted||dlgActive) return;
+  const n=nearestNPC();
+  if(n && dist(player,n)<70){ startDialogue(n); return; }
+  // tray in cafeteria
+  if(currentMap==='cafe' && !player.hasTray && player.x<320 && player.y<220){ player.hasTray=true; toast('🍽️ Got lunch tray! Now sit at a table (walk to a table + E)'); startDialogue({dlgId:'chef_mom', look:{name:'Lunch Lady',skin:'#e3ab7e',hat:'hairnet',hair:'laid',hairColor:'#333',jacket:'#fff',pants:'#555',gloves:'#fff',gender:'Girl'}, x:player.x,y:player.y,phase:0,talking:0}); dlgQueue.push("Extra gravy, sugar! Now go sit with your friends!"); return; }
+  // sit
+  if(currentMap==='cafe' && player.hasTray && !player.ate){
+    for(const p of MAPS.cafe.props.filter(p=>p.t==='table')){
+      if(Math.abs(player.x-p.x)<90 && Math.abs(player.y-p.y)<60){
+        player.ate=true; toast('😋 Yummy! Lunch complete! (+ gossip unlocked)');
+        const who = player.isCustom? 'new kid '+player.cname : canonById(player.canonId).name;
+        dlgSpeaker={name:'Lunch Gossip'}; dlgQueue=[`You sit down with your tray as ${who}.`, pick(["Cartman: 'My mom made my lunch BETTER than this slop!'","Wendy: 'Stan, chew with your mouth CLOSED.'","Butters: 'Oh hamburgers, mystery meat again!'","Tweek: 'GAH! The milk tastes like PRESSURE!'","Craig: '...Tweek, eat. ...Good boy.'","Kenny: 'Mmph! (...This slop is gourmet where I'm from.)'","Tolkien: 'Nichole, try my fruit cup.'","Clyde: '*cries into mashed potatoes*'"]) , "Lunch period complete! Head to the Playground for recess! ⏰"]; showNext(); return;
+      }
+    }
+  }
+}
+function nearestNPC(){ let best=null,bd=1e9; for(const n of npcs){ if(n.map!==currentMap) continue; const d=dist(player,n); if(d<bd){bd=d;best=n;} } return bd<90?best:null; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
+
+/* ---------------- DIALOGUE UI ---------------- */
+const dlgEl=document.getElementById('dlg'), dlgName=document.getElementById('dlgName'),
+      dlgText=document.getElementById('dlgText'), dlgP=document.getElementById('dlgPortrait'),
+      dctx=dlgP.getContext('2d');
+function startDialogue(n){
+  const lines=getDialogue(n.dlgId, player);
+  dlgSpeaker=n.look||n; dlgQueue=[...lines]; n.talking=3; showNext();
+}
+function showNext(){
+  if(!dlgQueue.length){ dlgEl.classList.add('hidden'); dlgActive=false; dlgSpeaker=null; return; }
+  dlgActive=true; dlgEl.classList.remove('hidden');
+  const line=dlgQueue.shift();
+  // speaker name
+  let nm = dlgSpeaker.name||dlgSpeaker.short||'???';
+  if(dlgSpeaker.short) nm=dlgSpeaker.short;
+  dlgName.textContent='🗨️ '+nm;
+  // typewriter
+  dlgText.textContent=''; let i=0; clearInterval(dlgTimer);
+  dlgTimer=setInterval(()=>{ dlgText.textContent=line.slice(0,++i); if(i>=line.length) clearInterval(dlgTimer); },12);
+  drawPortrait(dlgSpeaker);
+}
+function advanceDialogue(){ if(!dlgActive) return; if(dlgText.textContent.length < 8){} showNext(); }
+function drawPortrait(look){
+  dctx.clearRect(0,0,84,84); dctx.save(); dctx.translate(42,52); drawKid(dctx,0,0,look,1.2,0,true); dctx.restore();
+}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',3200); }
+
+/* ---------------- SOUTH PARK PAPER ART ---------------- */
+function rr(c,x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+function drawKid(c, x, y, look, s, walkPh, faceOnly){
+  // s = scale (~1). walkPh for waddle.
+  c.save(); c.translate(x,y); c.scale(s,s);
+  const wob = Math.sin(walkPh)*4; // waddle
+  const tw = look.twitch ? Math.sin(performance.now()/60)*2 : 0;
+  c.translate(tw,0);
+  if(faceOnly){ c.translate(0,8); }
+  const skin=look.skin||'#ffcc99';
+  const jacket=look.jacket||look.shirt||'#5eb1ef';
+  const pants=look.pants||'#333';
+  const gloves=look.gloves||jacket;
+  if(!faceOnly){
+    // shadow
+    c.fillStyle='rgba(0,0,0,.18)'; c.beginPath(); c.ellipse(0,26,22,6,0,0,7); c.fill();
+    // legs (stubby, alternate)
+    const l1=Math.sin(walkPh)*5, l2=-Math.sin(walkPh)*5;
+    c.fillStyle=pants; rr(c,-13+l1*.4,8,11,18,4); c.fill(); rr(c,2+l2*.4,8,11,18,4); c.fill();
+    c.fillStyle='#222'; rr(c,-13+l1*.4,22,11,7,3); c.fill(); rr(c,2+l2*.4,22,11,7,3); c.fill();
+    // body
+    c.save(); c.rotate(Math.sin(walkPh)*0.06);
+    c.fillStyle=jacket; c.strokeStyle='#000'; c.lineWidth=2.5;
+    rr(c,-20,-14,40,26,9); c.fill(); c.stroke();
+    // buttons / detail
+    c.fillStyle='rgba(0,0,0,.25)'; c.beginPath(); c.arc(0,-4,2,0,7); c.arc(0,3,2,0,7); c.fill();
+    // arms + mittens
+    const aSwing=Math.sin(walkPh)*6;
+    c.fillStyle=jacket; c.strokeStyle='#000'; c.lineWidth=2;
+    // left
+    c.save(); c.translate(-20,-6); c.rotate(0.3+aSwing*0.03); rr(c,-7,-4,9,20,5); c.fill(); c.stroke();
+    c.fillStyle=gloves; c.beginPath(); c.arc(-2,18,7,0,7); c.fill(); c.stroke(); c.restore();
+    // right
+    c.save(); c.translate(20,-6); c.rotate(-0.3-aSwing*0.03); c.fillStyle=jacket; rr(c,-2,-4,9,20,5); c.fill(); c.stroke();
+    c.fillStyle=gloves; c.beginPath(); c.arc(3,18,7,0,7); c.fill(); c.stroke(); c.restore();
+    c.restore();
+    if(look.crutches){ c.strokeStyle='#6b3a1a'; c.lineWidth=3; c.beginPath(); c.moveTo(-28,28); c.lineTo(-30,-8); c.moveTo(28,28); c.lineTo(30,-8); c.stroke(); }
+    if(look.id==='timmy'||look.hat==='wheelchair'){ c.fillStyle='#555'; c.beginPath(); c.arc(-14,24,9,0,7); c.arc(14,24,9,0,7); c.fill(); c.strokeStyle='#000'; c.lineWidth=2; c.stroke(); }
+  }
+  // HEAD — big paper circle
+  const hy = faceOnly? 0 : -34;
+  c.save(); c.translate(0,hy); c.rotate(wob*0.01 + (look.twitch? Math.sin(performance.now()/50)*0.05:0));
+  // head shape
+  c.fillStyle=skin; c.strokeStyle='#000'; c.lineWidth=2.5;
+  c.beginPath(); c.ellipse(0,0,26,24,0,0,7); c.fill(); c.stroke();
+  // hats / hair
+  drawHat(c,look);
+  // eyes — classic close-together ovals
+  const blink = (Math.floor(performance.now()/3000)%7===0)?0.15:1;
+  c.fillStyle='#fff'; c.strokeStyle='#000'; c.lineWidth=1.6;
+  c.beginPath(); c.ellipse(-6,-2,7,8*blink,0,0,7); c.fill(); c.stroke();
+  c.beginPath(); c.ellipse(6,-2,7,8*blink,0,0,7); c.fill(); c.stroke();
+  if(blink>0.5){ c.fillStyle='#000'; c.beginPath(); c.arc(-5,-1,2,0,7); c.arc(5,-1,2,0,7); c.fill(); }
+  // mouth — flap; Kenny parka covers
+  if(look.hat==='parka'){ c.fillStyle='#e67e22'; rr(c,-16,4,32,14,6); c.fill(); c.stroke();
+    c.fillStyle='#5a2d00'; rr(c,-7,8,14,6,3); c.fill(); }
+  else { const open = (dlgActive&&dlgSpeaker===look)? 5+Math.sin(performance.now()/90)*3 : 2;
+    c.fillStyle='#5a1500'; c.beginPath(); c.ellipse(0,10,6,open,0,0,7); c.fill(); c.strokeStyle='#000'; c.lineWidth=1.4; c.stroke(); }
+  c.restore();
+  c.restore();
+}
+function drawHat(c, look){
+  const hc = look.hatColor||'#3862a6';
+  c.save();
+  if(look.hat==='flap'||look.hat==='beanie'||look.hat==='chullo'||look.hat==='ushanka'){
+    c.fillStyle=hc; c.strokeStyle='#000'; c.lineWidth=2;
+    c.beginPath(); c.ellipse(0,-16,25,14,0,Math.PI,0); c.fill(); c.stroke();
+    c.fillRect(-25,-18,50,4);
+    if(look.hat==='flap'){ // stan flaps
+      c.fillStyle=hc; rr(c,-29,-18,8,20,4); c.fill(); c.stroke(); rr(c,21,-18,8,20,4); c.fill(); c.stroke();
+      c.fillStyle=look.pom||'#c1272d'; c.beginPath(); c.arc(0,-30,7,0,7); c.fill(); c.stroke(); }
+    if(look.hat==='ushanka'){ c.fillStyle=hc; rr(c,-29,-20,9,18,4); c.fill(); c.stroke(); rr(c,20,-20,9,18,4); c.fill(); c.stroke();
+      c.fillStyle='#7a2a2a'; c.beginPath(); c.arc(0,-24,5,0,7); c.fill(); }
+    if(look.hat==='chullo'){ c.strokeStyle='#000'; for(let i=-2;i<=2;i++){ c.beginPath(); c.moveTo(i*8,-28); c.lineTo(i*8,-20); c.stroke(); } }
+    if(look.hat==='beanie'){ c.fillStyle='#c1272d'; c.beginPath(); c.arc(0,-29,6,0,7); c.fill(); c.stroke(); }
+  } else if(look.hat==='beret'){
+    c.fillStyle=hc; c.strokeStyle='#000'; c.lineWidth=2;
+    c.beginPath(); c.ellipse(3,-20,22,10,-0.15,0,7); c.fill(); c.stroke();
+  } else if(look.hat==='parka'){
+    c.fillStyle=hc; c.strokeStyle='#000'; c.lineWidth=2.5;
+    c.beginPath(); c.ellipse(0,-6,29,27,0,0,7); c.fill(); c.stroke();
+    c.fillStyle='#a34d00'; c.beginPath(); c.ellipse(0,-6,22,20,0,0,7); c.stroke();
+  } else if(look.hat==='hairnet'){
+    c.fillStyle='#e8e8e8'; c.strokeStyle='#000'; c.beginPath(); c.ellipse(0,-16,24,12,0,Math.PI,0); c.fill(); c.stroke();
+  } else {
+    // hair styles
+    const col=look.hairColor||'#5a2d1a';
+    c.fillStyle=col; c.strokeStyle='#000'; c.lineWidth=1.6;
+    const h=look.hair||'laid';
+    if(h==='short-afro'){ c.beginPath(); c.ellipse(0,-14,27,16,0,Math.PI,0); c.fill(); c.stroke();
+      for(let i=0;i<12;i++){ const a=Math.PI+i*Math.PI/11; c.beginPath(); c.arc(Math.cos(a)*24,-14+Math.sin(a)*-14,5,0,7); c.fill(); c.stroke(); } }
+    else if(h==='messy-blond'){ c.beginPath(); c.ellipse(0,-16,24,10,0,Math.PI,0); c.fill(); c.stroke();
+      c.beginPath(); for(let i=-4;i<=4;i++){ c.moveTo(i*6,-24); c.lineTo(i*6+(i%2?5:-5),-34);} c.stroke(); }
+    else if(h==='red-afro'){ c.fillStyle='#b33a1a'; c.beginPath(); c.ellipse(0,-14,28,18,0,Math.PI,0); c.fill(); c.stroke(); }
+    else if(h.includes('long')){ c.beginPath(); c.ellipse(0,-15,25,12,0,Math.PI,0); c.fill(); c.stroke();
+      rr(c,-28,-18,8,34,4); c.fill(); c.stroke(); rr(c,20,-18,8,34,4); c.fill(); c.stroke(); }
+    else { c.beginPath(); c.ellipse(0,-15,25,11,0,Math.PI,0); c.fill(); c.stroke(); }
+  }
+  c.restore();
+}
+
+/* ---------------- BACKGROUNDS ---------------- */
+function drawBG(){
+  const m=currentMap;
+  // sky / floor
+  if(m==='bus'||m==='outside'||m==='home'){
+    let g=ctx.createLinearGradient(0,0,0,H); g.addColorStop(0,'#7ec8f0'); g.addColorStop(.55,'#a8dcf5'); g.addColorStop(.55,'#7fbf5f'); g.addColorStop(1,'#5a9a44');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // mountains + clouds (south park style flat)
+    ctx.fillStyle='#e8f4fa'; [[80,180,120],[300,150,160],[700,170,140],[900,150,110]].forEach(([x,y,w])=>{ ctx.beginPath(); ctx.moveTo(x-w/2,y+60); ctx.lineTo(x,y-40); ctx.lineTo(x+w/2,y+60); ctx.fill(); ctx.strokeStyle='#5a7a9a'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='#fff'; ctx.fillRect(x-14,y-40,28,12); });
+    ctx.fillStyle='rgba(255,255,255,.9)'; [[200,80],[500,60],[800,90]].forEach(([x,y])=>{ ctx.beginPath(); ctx.ellipse(x,y,46,16,0,0,7); ctx.ellipse(x+30,y+6,34,13,0,0,7); ctx.fill(); });
+    // distant houses
+    ctx.fillStyle='#c9a06b'; ctx.strokeStyle='#000'; ctx.lineWidth=2;
+    [[420,300],[560,300]].forEach(([x,y])=>{ if(m==='outside'){ ctx.fillRect(x,y,80,50); ctx.beginPath(); ctx.moveTo(x-8,y); ctx.lineTo(x+40,y-28); ctx.lineTo(x+88,y); ctx.fill(); ctx.stroke(); }});
+  } else {
+    // interiors: wall + floor
+    ctx.fillStyle='#d8c9a8'; ctx.fillRect(0,0,W,300);
+    ctx.fillStyle='#a08050'; ctx.fillRect(0,290,W,14);
+    ctx.fillStyle='#8a6f4d'; ctx.fillRect(0,304,W,H-304);
+    ctx.fillStyle='rgba(0,0,0,.06)'; for(let x=0;x<W;x+=64) ctx.fillRect(x,304,2,H);
+    if(m==='hall'){ ctx.fillStyle='#bfe3f2'; ctx.fillRect(0,40,W,180); ctx.fillStyle='#fff'; for(let x=40;x<W;x+=120) ctx.fillRect(x,70,70,100); }
+  }
+  // props
+  for(const p of MAPS[m].props) drawProp(p);
+  // doors (glowing)
+  const t=performance.now()/400;
+  for(const d of MAPS[m].doors){
+    ctx.save();
+    ctx.fillStyle=`rgba(255,204,0,${0.55+Math.sin(t)*0.2})`; ctx.strokeStyle='#000'; ctx.lineWidth=3;
+    rr(ctx,d.x,d.y,d.w,d.h,10); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#111'; ctx.font='bold 13px Fredoka, sans-serif'; ctx.textAlign='center';
+    ctx.fillText(d.label,d.x+d.w/2,d.y+d.h/2+5);
+    ctx.restore();
+  }
+}
+function drawProp(p){
+  ctx.save(); ctx.strokeStyle='#000'; ctx.lineWidth=2.5;
+  if(p.t==='tree'){ ctx.fillStyle='#5a3a1a'; ctx.fillRect(p.x-6,p.y,12,44); ctx.fillStyle='#2f7a2f'; ctx.beginPath(); ctx.moveTo(p.x-34,p.y+8); ctx.lineTo(p.x,p.y-44); ctx.lineTo(p.x+34,p.y+8); ctx.fill(); ctx.stroke(); }
+  if(p.t==='sign'){ ctx.fillStyle='#fff'; rr(ctx,p.x,p.y,150,54,8); ctx.fill(); ctx.stroke(); ctx.fillStyle='#111'; ctx.font='bold 13px Fredoka'; ctx.textAlign='center'; ctx.fillText('SOUTH PARK',p.x+75,p.y+22); ctx.fillText('BUS STOP',p.x+75,p.y+40); ctx.fillStyle='#5a3a1a'; ctx.fillRect(p.x+68,p.y+54,10,40); }
+  if(p.t==='bench'){ ctx.fillStyle='#8a5a2b'; rr(ctx,p.x,p.y,120,16,6); ctx.fill(); ctx.stroke(); ctx.fillRect(p.x+8,p.y+16,10,26); ctx.fillRect(p.x+102,p.y+16,10,26); }
+  if(p.t==='school'){ ctx.fillStyle='#b34a3a'; ctx.fillRect(p.x,p.y,208,90); ctx.strokeRect(p.x,p.y,208,90); ctx.fillStyle='#fff'; ctx.font='bold 20px Fredoka'; ctx.textAlign='center'; ctx.fillText('SOUTH PARK',p.x+104,p.y+40); ctx.fillText('ELEMENTARY',p.x+104,p.y+62); ctx.fillStyle='#3862a6'; ctx.fillRect(p.x+84,p.y+66,40,24); }
+  if(p.t==='swing'){ ctx.strokeStyle='#333'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x,p.y+90); ctx.moveTo(p.x+70,p.y); ctx.lineTo(p.x+70,p.y+90); ctx.moveTo(p.x-14,p.y); ctx.lineTo(p.x+84,p.y); ctx.stroke(); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(p.x+18,p.y); ctx.lineTo(p.x+18,p.y+60); ctx.moveTo(p.x+52,p.y); ctx.lineTo(p.x+52,p.y+60); ctx.stroke(); ctx.fillStyle='#7a4a2b'; ctx.fillRect(p.x+10,p.y+60,50,10); }
+  if(p.t==='slide'){ ctx.fillStyle='#c1272d'; rr(ctx,p.x,p.y,110,20,10); ctx.fill(); ctx.stroke(); ctx.fillStyle='#888'; ctx.fillRect(p.x+80,p.y+20,14,60); }
+  if(p.t==='ball'){ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(p.x,p.y+Math.sin(performance.now()/300)*4,13,0,7); ctx.fill(); ctx.stroke(); ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(p.x,p.y,4,0,7); ctx.fill(); }
+  if(p.t==='locker'){ for(let i=0;i<4;i++){ ctx.fillStyle=['#c1272d','#3862a6','#3fa34d','#e67e22'][i]; ctx.fillRect(p.x+i*52,p.y,48,110); ctx.strokeRect(p.x+i*52,p.y,48,110); ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fillRect(p.x+i*52+18,p.y+44,10,6);} }
+  if(p.t==='poster'){ ctx.fillStyle='#fff'; rr(ctx,p.x,p.y,110,60,8); ctx.fill(); ctx.stroke(); ctx.fillStyle='#c1272d'; ctx.font='bold 12px Fredoka'; ctx.textAlign='center'; ctx.fillText('HAVE YOU',p.x+55,p.y+22); ctx.fillText('SEEN KENNY?',p.x+55,p.y+38); }
+  if(p.t==='board'){ ctx.fillStyle='#2f6b2f'; rr(ctx,p.x,p.y,400,90,8); ctx.fill(); ctx.stroke(); ctx.fillStyle='#fff'; ctx.font='16px Fredoka'; ctx.textAlign='center'; ctx.fillText('2 + 2 = ?   (no drugs, m\'kay)',p.x+200,p.y+40); ctx.fillText('LUNCH 12:00 — CHEESY POOFS?',p.x+200,p.y+64); }
+  if(p.t==='desk'){ ctx.fillStyle='#c9a06b'; rr(ctx,p.x,p.y,110,44,8); ctx.fill(); ctx.stroke(); ctx.fillRect(p.x+10,p.y+44,10,30); ctx.fillRect(p.x+90,p.y+44,10,30); }
+  if(p.t==='counter'){ ctx.fillStyle='#ddd'; rr(ctx,p.x,p.y,260,80,8); ctx.fill(); ctx.stroke(); ctx.fillStyle='#7ed957'; ctx.font='bold 14px Fredoka'; ctx.textAlign='center'; ctx.fillText('🍽️ GET TRAY HERE (E)',p.x+130,p.y+46); }
+  if(p.t==='table'){ ctx.fillStyle='#e8d8b0'; ctx.beginPath(); ctx.ellipse(p.x,p.y,72,30,0,0,7); ctx.fill(); ctx.stroke(); ctx.fillStyle='#c9a06b'; ctx.fillRect(p.x-6,p.y+28,12,34); }
+  if(p.t==='house'){ ctx.fillStyle='#d8b48a'; ctx.fillRect(p.x,p.y,250,120); ctx.strokeRect(p.x,p.y,250,120); ctx.fillStyle='#8e2f32'; ctx.beginPath(); ctx.moveTo(p.x-14,p.y); ctx.lineTo(p.x+125,p.y-60); ctx.lineTo(p.x+264,p.y); ctx.fill(); ctx.stroke(); ctx.fillStyle='#3862a6'; ctx.fillRect(p.x+105,p.y+60,40,60); }
+  if(p.t==='couch'){ ctx.fillStyle='#8e44ad'; rr(ctx,p.x,p.y,170,60,14); ctx.fill(); ctx.stroke(); }
+  ctx.restore();
+}
+
+/* ---------------- UPDATE + RENDER ---------------- */
+let lastT=0;
+function loop(ts){
+  const dt=Math.min(0.033,(ts-lastT)/1000||0.016); lastT=ts;
+  if(gameStarted && !dlgActive) update(dt);
+  else { // idle anims
+    player.walk+=dt*2;
+  }
+  // NPC wander + talk timers
+  for(const n of npcs){ if(n.map!==currentMap) continue; n.phase+=dt*6; n.wt-=dt; if(n.wt<0){ n.wt=2+Math.random()*4; n.ox=n.x+(Math.random()-0.5)*60; n.oy=n.y+(Math.random()-0.5)*40; } if(n.talking>0)n.talking-=dt;
+    // Creek: craig & tweek stick together + hold hands
+    if((n.nid==='craig'||n.nid==='tweek')){ /* keep near each other handled by spawn */ }
+    else { n.x+=(n.ox-n.x)*dt*0.8; n.y+=(n.oy-n.y)*dt*0.8; }
+  }
+  // twitch quirk
+  if(player.isCustom && creatorSel.quirk.includes('Twitch') || (!player.isCustom && player.canonId==='tweek')){
+    if(Math.random()<0.02){ player.twitchT=0.5; if(dlgActive===false && Math.random()<0.3) toast('GAH! *twitch* Too much pressure!'); }
+  }
+  if(player.twitchT>0) player.twitchT-=dt;
+  // clock
+  if(gameStarted) gameTime+=dt*2.2; // full day ~ 3 min? slow
+  if(gameTime>=15*60) gameTime=8*60;
+  render();
+  requestAnimationFrame(loop);
+}
+function update(dt){
+  let mx=0,my=0;
+  if(keys['w']||keys['arrowup'])my-=1; if(keys['s']||keys['arrowdown'])my+=1;
+  if(keys['a']||keys['arrowleft'])mx-=1; if(keys['d']||keys['arrowright'])mx+=1;
+  player.moving=(mx||my);
+  const sp=170;
+  if(mx||my){ const l=Math.hypot(mx,my); mx/=l; my/=l; if(mx!==0)player.dir=mx>0?1:-1; player.walk+=dt*10; }
+  let nx=player.x+mx*sp*dt, ny=player.y+my*sp*dt;
+  // walls
+  const r=16;
+  const hit=(x,y)=>MAPS[currentMap].walls.some(w=>x+r>w.x&&x-r<w.x+w.w&&y+r>w.y&&y-r<w.y+w.h);
+  if(!hit(nx,player.y))player.x=nx;
+  if(!hit(player.x,ny))player.y=ny;
+  player.x=Math.max(20,Math.min(W-20,player.x)); player.y=Math.max(40,Math.min(H-40,player.y));
+  // doors
+  for(const d of MAPS[currentMap].doors){
+    if(player.x>d.x-6&&player.x<d.x+d.w+6&&player.y>d.y-6&&player.y<d.y+d.h+6){
+      currentMap=d.to; player.x=W/2; player.y=d.to==='hall'&&currentMap==='hall'?400:300;
+      if(d.to==='hall'){player.x=500;player.y=400;} if(d.to==='outside'){player.x=500;player.y=180;}
+      if(d.to==='bus'){player.x=880;player.y=280;} if(d.to==='home'){player.x=100;player.y=300;}
+      if(d.to==='class'){player.x=500;player.y=460;} if(d.to==='cafe'){player.x=500;player.y=460;}
+      toast('📍 '+MAPS[currentMap].name+' — '+MAPS[currentMap].sub);
+      updateHUD(); break;
+    }
+  }
+  // auto objective
+  const mins=Math.floor(gameTime);
+  const hh=Math.floor(mins/60), mm=mins%60;
+  let obj='🚌 Explore! Talk to everyone (E)';
+  if(currentMap==='cafe'&&!player.hasTray)obj='🍽️ Grab a tray at the counter (E)!';
+  else if(currentMap==='cafe'&&player.hasTray&&!player.ate)obj='🪑 Sit at a table + press E to eat!';
+  else if(player.ate)obj='🛝 Recess! Go to Playground — Creek is holding hands!';
+  else if(currentMap==='bus')obj='➡️ Walk into the YELLOW door to get to school!';
+  document.getElementById('objective').textContent=obj+`  •  ${fmtTime()}`;
+}
+function fmtTime(){ const m=Math.floor(gameTime); let h=Math.floor(m/60), mm=m%60; const ap=h>=12?'PM':'AM'; let hh=h%12; if(hh===0)hh=12; return `${hh}:${String(mm).padStart(2,'0')} ${ap}`; }
+function render(){
+  ctx.clearRect(0,0,W,H);
+  drawBG();
+  // sort by y
+  const ents=[...npcs.filter(n=>n.map===currentMap).map(n=>({...n,isNPC:true})), {...player,isNPC:false,look:playerLook()}];
+  ents.sort((a,b)=>a.y-b.y);
+  for(const e of ents){
+    if(e.isNPC){
+      // Creek hand-hold line
+      if((e.nid==='craig'||e.nid==='tweek')){
+        const other=npcs.find(o=>o.map===currentMap&&((e.nid==='craig'&&o.nid==='tweek')||(e.nid==='tweek'&&o.nid==='craig')));
+        if(other){ ctx.strokeStyle='#000'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(e.x+(e.nid==='craig'?18:-18),e.y-2); ctx.lineTo(other.x+(e.nid==='craig'?-18:18),other.y-2); ctx.stroke();
+          ctx.fillStyle='#ff5a8a'; ctx.font='13px sans-serif'; ctx.textAlign='center'; ctx.fillText('💙',(e.x+other.x)/2,(e.y+other.y)/2-14); }
+      }
+      const bob=Math.sin(e.phase)*1.5;
+      drawKid(ctx,e.x,e.y+bob,e.look,1,e.phase,e.talking>0);
+      // name tag
+      ctx.fillStyle='rgba(0,0,0,.75)'; ctx.font='bold 11px Fredoka'; ctx.textAlign='center';
+      const nm=e.look.short||e.look.name; const wdt=ctx.measureText(nm).width+12;
+      rr(ctx,e.x-wdt/2,e.y-78,wdt,18,8); ctx.fill();
+      ctx.fillStyle= e.nid==='craig'||e.nid==='tweek' ? '#7ec8ff' : '#fff'; ctx.fillText(nm,e.x,e.y-64);
+      // E bubble
+      if(e===nearestNPC()){ ctx.fillStyle='#ffcc00'; ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(e.x,e.y-92,13,0,7); ctx.fill(); ctx.stroke(); ctx.fillStyle='#111'; ctx.font='bold 13px Fredoka'; ctx.fillText('E',e.x,e.y-87); }
+    } else {
+      const tw = player.twitchT>0;
+      const lk={...e.look, twitch:tw};
+      const jx = tw? (Math.random()-0.5)*6 : 0;
+      drawKid(ctx,e.x+jx,e.y,lk,1.12,player.moving?player.walk:Math.sin(performance.now()/600)*0.6,false);
+      // player tag
+      const nm=player.isCustom?player.cname+' (YOU)':canonById(player.canonId).short+' (YOU)';
+      ctx.fillStyle='#ffcc00'; ctx.font='bold 12px Fredoka'; ctx.textAlign='center';
+      const w2=ctx.measureText(nm).width+14; ctx.strokeStyle='#000'; ctx.lineWidth=2.5; rr(ctx,e.x-w2/2,e.y-82,w2,20,9); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#111'; ctx.fillText(nm,e.x,e.y-67);
+    }
+  }
+  // vignette
+  ctx.fillStyle='rgba(0,0,0,.12)'; ctx.fillRect(0,0,W,8); ctx.fillRect(0,H-8,W,8);
+}
+function updateHUD(){
+  document.getElementById('pill-map').textContent='📍 '+MAPS[currentMap].name;
+  document.getElementById('pill-who').textContent=player.isCustom?('🧒 '+player.cname):('⭐ '+canonById(player.canonId).name);
+  document.getElementById('pill-time').textContent=fmtTime();
+}
+setInterval(()=>{ if(gameStarted) document.getElementById('pill-time').textContent=fmtTime(); },500);
+
+/* ---------------- UI: TITLE / CREATOR / CANON ---------------- */
+const $=id=>document.getElementById(id);
+function chipGroup(elId, opts, sel, cb){
+  const el=$(elId); el.innerHTML='';
+  opts.forEach(o=>{ const d=document.createElement('div'); d.className='chip'+(o===sel?' sel':''); d.textContent=o; d.onclick=()=>{ cb(o); chipGroup(elId,opts,o,cb); preview(); }; el.appendChild(d); });
+}
+function setupCreator(){
+  chipGroup('chRace',['White','Black','Asian','Latino','Native'],creatorSel.race,o=>creatorSel.race=o);
+  chipGroup('chGender',['Boy','Girl','Nonbinary'],creatorSel.gender,o=>creatorSel.gender=o);
+  chipGroup('chHair',['Laid flat','Short afro','Messy (Tweek)','Long','Auto (afro)'],creatorSel.hair,o=>creatorSel.hair=o);
+  chipGroup('chHairC',['Brown','Black','Blond','Red'],creatorSel.hairColor,o=>creatorSel.hairColor=o);
+  chipGroup('chFam',['Mom + Dad','Just Mom'],creatorSel.family,o=>creatorSel.family=o);
+  chipGroup('chQuirk',['None','Twitch (like Tweek)','Says "Oh hamburgers!"'],creatorSel.quirk,o=>creatorSel.quirk=o);
+  chipGroup('chShirt',Object.keys(SHIRT_COLORS),creatorSel.shirt,o=>creatorSel.shirt=o);
+  chipGroup('chPants',Object.keys(PANTS_COLORS),creatorSel.pants,o=>creatorSel.pants=o);
+  $('inName').oninput=e=>{ player.cname=e.target.value||'New Kid'; preview(); };
+  preview();
+}
+function preview(){
+  const p=$('previewCanvas').getContext('2d'); p.clearRect(0,0,180,180);
+  p.fillStyle='#bfe3f2'; p.fillRect(0,0,180,180);
+  p.fillStyle='rgba(0,0,0,.1)'; p.beginPath(); p.ellipse(90,150,50,10,0,0,7); p.fill();
+  const tmp={...player}; const keepSel={...creatorSel};
+  // synthesize look for preview
+  player.cname=$('inName').value||'New Kid';
+  const lk=(()=>{ let hair='laid';
+    if(keepSel.race==='Black'&&(keepSel.hair==='Auto (afro)'||keepSel.hair==='Laid flat'))hair='short-afro';
+    else if(keepSel.hair==='Short afro')hair='short-afro';
+    else if(keepSel.hair==='Messy (Tweek)')hair='messy-blond';
+    else if(keepSel.hair==='Long')hair='laid-black-long';
+    return {skin:RACE_SKIN[keepSel.race],hat:'hair',hair,hairColor:keepSel.hairColor==='Black'?'#1a1a1a':keepSel.hairColor==='Blond'?'#f2e08a':keepSel.hairColor==='Red'?'#b33a1a':'#5a2d1a',jacket:SHIRT_COLORS[keepSel.shirt],pants:PANTS_COLORS[keepSel.pants],gloves:SHIRT_COLORS[keepSel.shirt],gender:keepSel.gender}; })();
+  const t=performance.now()/300;
+  p.save(); p.translate(90,95); drawKid(p,0,0,lk,2.1,t,false); p.restore();
+  $('previewLabel').textContent=$('inName').value+' • '+keepSel.race+' • '+keepSel.gender+' • '+(keepSel.family);
+  // also refresh creator note
+  $('creatorNote').innerHTML = keepSel.race==='Black'
+    ? `Race = <b>Black</b> → <b>simple short afro</b> auto-applied ✔ (skin ${RACE_SKIN.Black}). Change Hair to override.`
+    : `Hair = <b>laid down flat</b> (classic South Park). Pick <b>Short afro</b> anytime. Quirk Twitch = Tweek shake + "GAAH!"`;
+}
+setInterval(()=>{ if(!$('scr-create').classList.contains('hidden')) preview(); },400);
+
+let canonSel='stan';
+function setupCanon(){
+  const g=$('canonGrid'); g.innerHTML='';
+  CANON.forEach(c=>{
+    const d=document.createElement('div'); d.className='canon-card'+(c.id===canonSel?' sel':''); d.onclick=()=>{ canonSel=c.id; setupCanon(); };
+    const mini=document.createElement('canvas'); mini.width=120; mini.height=90;
+    const mc=mini.getContext('2d'); mc.fillStyle='#cfeaf5'; mc.fillRect(0,0,120,90);
+    mc.save(); mc.translate(60,62); drawKid(mc,0,0,c,1.15,1.2,false); mc.restore();
+    const b=document.createElement('b'); b.textContent=c.name;
+    const i=document.createElement('i'); i.textContent=c.rel+' • '+c.desc;
+    d.appendChild(mini); d.appendChild(b); d.appendChild(i); g.appendChild(d);
+  });
+}
+
+$('btnGoCanon').onclick=()=>{ $('scr-title').classList.add('hidden'); $('scr-canon').classList.remove('hidden'); setupCanon(); };
+$('btnGoCreate').onclick=()=>{ $('scr-title').classList.add('hidden'); $('scr-create').classList.remove('hidden'); setupCreator(); };
+$('btnBack1').onclick=()=>{ $('scr-canon').classList.add('hidden'); $('scr-title').classList.remove('hidden'); };
+$('btnBack2').onclick=()=>{ $('scr-create').classList.add('hidden'); $('scr-title').classList.remove('hidden'); };
+$('btnStartCanon').onclick=()=>{ player.isCustom=false; player.canonId=canonSel; startGame(); };
+$('btnStartCustom').onclick=()=>{
+  player.isCustom=true; player.cname=$('inName').value||'New Kid';
+  player.race=creatorSel.race; player.gender=creatorSel.gender;
+  startGame();
+};
+function startGame(){
+  $('scr-canon').classList.add('hidden'); $('scr-create').classList.add('hidden'); $('scr-title').classList.add('hidden');
+  gameStarted=true; currentMap='bus'; player.x=120; player.y=400; player.hasTray=false; player.ate=false; gameTime=8*60+10;
+  spawnNPCs(); updateHUD();
+  const who=player.isCustom?player.cname:canonById(player.canonId).name;
+  toast(`Welcome, ${who}! Talk with E!`);
+  dlgSpeaker={name:'Randy Marsh (announcer)'}; dlgQueue=[
+    player.isCustom? `Welcome to South Park, ${player.cname}! You're the new kid — ${creatorSel.race}, ${creatorSel.gender}, living with ${creatorSel.family}.` : `You are ${canonById(player.canonId).name}! Everyone reacts to YOU specifically.`,
+    "Go to school: walk RIGHT into the yellow door. Then: class → LUNCH in cafeteria (grab tray, sit!) → recess with Craig & Tweek 💙.",
+    player.isCustom && creatorSel.quirk.includes('Twitch') ? "You twitch like Tweek sometimes. GAAH! Embrace it." : "Talk to EVERYONE — each hero has unique lines for YOU. Find all canon couples!",
+  ]; showNext();
+  // spawn Creek together in playground (hold hands positions)
+  const cr=npcs.find(n=>n.nid==='craig'), tw=npcs.find(n=>n.nid==='tweek');
+  if(cr&&tw){ cr.x=250;cr.ox=250;cr.y=350;cr.oy=350; tw.x=310;tw.ox=310;tw.y=350;tw.oy=350; }
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
