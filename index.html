@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>South Park Fan RP — Paper Town School (2D Desktop)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="wrap">
+  <div id="topbar">
+    <div id="logo">★ PAPER TOWN <span>fan-made school RP</span></div>
+    <div id="hud">
+      <span id="hud-who">—</span>
+      <span id="hud-where">Schoolyard</span>
+      <span id="hud-time">☀ Morning</span>
+      <span id="hud-hint">WASD · E talk · M map · 3😈 4✏️ 5🤝 crew</span>
+    </div>
+  </div>
+  <div id="stage">
+    <canvas id="game" width="960" height="540"></canvas>
+
+    <!-- Title screen -->
+    <div id="title" class="overlay">
+      <div class="card big">
+        <h1>PAPER TOWN<span>: School RP</span></h1>
+        <p class="sub">A 2D fan-made school RP inspired by South Park's paper-cutout style.<br>All art & code here is original. Not affiliated with the show.</p>
+        <div class="btnrow">
+          <button id="btn-start" class="btn primary">▶ Start / Character Select</button>
+          <button id="btn-how" class="btn">How to play</button>
+        </div>
+        <div id="how" class="hidden">
+          <ul>
+            <li><b>WASD / Arrows</b> — walk (smooth, Kindergarten-style glide + wobble)</li>
+            <li><b>E / Space / Click</b> — talk, pick up lunch, open doors</li>
+            <li><b>1 / 2</b> — pick what YOU say (every playable kid says it differently)</li>
+            <li><b>3 😈</b> — insult them! They'll get MAD. Some want to <b>FIGHT</b> (Kyle always beats Cartman — obvious. Cartman cries.)</li>
+            <li><b>4 ✏️</b> — type ANYTHING yourself! Nice words = friends. Mean words = enemies. Try "fight", "sorry", their crush's name…</li>
+            <li><b>M</b> — fast-travel map · <b>L</b> — lunch tray · Go to the <b>Cafeteria at Lunch</b> to eat</li>
+            <li><b>Teachers</b> — Mr. Harris (class), Ms. Ellen + Principal Peters (hall), Coach Miller (playground). All talk differently!</li>
+            <li><b>Trouble system</b> — swear in class, mouth off to a teacher, or fight → <b>⛔ DETENTION</b>. Everyone except Cartman also gets <b>GROUNDED</b> — go home and face your parents! (Liane doesn't care. Lucky piggy.)</li>
+            <li><b>Main-4 meetups</b> — as Stan, Kyle, Cartman or Kenny, pick <b>5 🤝 Hang out!</b> to recruit the others. They follow you everywhere — into houses, into rooms!</li>
+            <li><b>Rooms</b> — every house has Living Room + Kitchen + Bedroom (gold side-doors). Moms cook, dads lounge, the resident kid chills in their room. E the 🎮 console for a group hangout!</li>
+            <li>Follow the school day: Morning → Class → Lunch → Recess → After School. Talk to everyone!</li>
+          </ul>
+        </div>
+        <p class="tiny">Desktop + keyboard recommended. Audio: none (keep class quiet!).</p>
+      </div>
+    </div>
+
+    <!-- Character select -->
+    <div id="select" class="overlay hidden">
+      <div class="card wide">
+        <h2>Choose who to play as</h2>
+        <p class="sub">Canon kids have unique lines. Or make your own new kid — pick race, gender, hair (incl. short afro), parents, even a Tweek-like twitch.</p>
+        <div id="roster" class="roster"></div>
+        <div class="btnrow">
+          <button id="btn-custom" class="btn primary">＋ Make My Own Character</button>
+          <button id="btn-back-title" class="btn">← Back</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Creator -->
+    <div id="creator" class="overlay hidden">
+      <div class="card wide">
+        <h2>New Kid Creator</h2>
+        <div class="creator-grid">
+          <div class="preview-box">
+            <canvas id="preview" width="240" height="300"></canvas>
+            <div id="preview-name">New Kid</div>
+            <div id="preview-desc" class="tiny"></div>
+          </div>
+          <div class="form">
+            <label>Name <input id="c-name" maxlength="14" value="New Kid"></label>
+            <div class="row2">
+              <label>Gender
+                <select id="c-gender"><option>Boy</option><option>Girl</option><option>Nonbinary</option></select>
+              </label>
+              <label>Race
+                <select id="c-race"><option>White</option><option selected>Black</option><option>Asian</option><option>Latino</option><option>Native</option><option>Mixed</option></select>
+              </label>
+            </div>
+            <div class="row2">
+              <label>Skin tone <select id="c-skin"></select></label>
+              <label>Hair style
+                <select id="c-hair">
+                  <option value="flat">Laid-down flat (normal)</option>
+                  <option value="afro" selected>Short afro</option>
+                  <option value="messy">Messy mop</option>
+                  <option value="buzz">Buzz cut</option>
+                  <option value="curly">Curly</option>
+                  <option value="long">Long straight</option>
+                  <option value="pigtails">Pigtails</option>
+                  <option value="bald">Bald / Hat only</option>
+                </select>
+              </label>
+            </div>
+            <div class="row3">
+              <label>Hair <input type="color" id="c-hairc" value="#1a1a1a"></label>
+              <label>Jacket <input type="color" id="c-jacket" value="#3b82f6"></label>
+              <label>Pants <input type="color" id="c-pants" value="#4b3b2a"></label>
+              <label>Hat <input type="color" id="c-hat" value="#f59e0b"></label>
+            </div>
+            <div class="row2">
+              <label>Parents
+                <select id="c-parents"><option value="momdad">Mom + Dad</option><option value="mom">Just Mom</option><option value="dad">Just Dad</option><option value="guardian">Grandma (guardian)</option></select>
+              </label>
+              <label>Twitch (like Tweek)
+                <select id="c-twitch"><option value="none">None — chill</option><option value="sometimes" selected>Sometimes — jittery</option><option value="alot">A LOT — full Tweek!</option></select>
+              </label>
+            </div>
+            <div class="row2">
+              <label>Mom's name <input id="c-mom" value="Mom"></label>
+              <label>Dad's name <input id="c-dad" value="Dad"></label>
+            </div>
+            <div class="btnrow">
+              <button id="btn-play-custom" class="btn primary">▶ Play as my kid</button>
+              <button id="btn-back-select" class="btn">← Roster</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dialogue -->
+    <div id="dlg" class="hidden">
+      <button id="dlg-x" title="Leave conversation (Esc)">✕</button>
+      <canvas id="portrait" width="120" height="120"></canvas>
+      <div id="dlg-main">
+        <div id="dlg-name">???</div>
+        <div id="dlg-text"></div>
+        <div id="dlg-opts"></div>
+        <div id="dlg-next">E / click ▸ · H hold hands (partner) · J hug · Esc leave</div>
+      </div>
+    </div>
+
+    <!-- Toast / quest -->
+    <div id="toast" class="hidden"></div>
+    <div id="objective"></div>
+
+    <!-- Map modal -->
+    <div id="mapmodal" class="overlay hidden">
+      <div class="card">
+        <h2>Fast travel</h2>
+        <div id="mapbtns" class="btnrow wrap"></div>
+        <div class="btnrow"><button id="btn-close-map" class="btn">Close (M)</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="footer">Fan game · original code + original paper-style art · no show assets used · relationships referenced as text (Tweek♥Craig, Stan♥Wendy on/off, Token♥Nichole, Stan & Kyle BFFs…).</div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
