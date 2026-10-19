@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#06080f">
+  <meta name="description" content="WEBFALL: NEW YORK - a 3D open-world parkour, web-swinging and cosmic superhero game.">
+  <title>WEBFALL // New York</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23ff2b45'/%3E%3Cpath d='M12 18h9l5 22 6-22h7l5 22 5-22h9l-9 30h-9l-5-19-5 19h-9z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div id="game-shell">
+    <canvas id="game" aria-label="WEBFALL game viewport"></canvas>
+
+    <div id="vignette"></div>
+    <div id="speed-lines"></div>
+    <div id="damage-flash"></div>
+    <div id="cinematic-bars"><div></div><div></div></div>
+
+    <section id="hud" class="hidden" aria-label="Heads-up display">
+      <div class="hud-top-left">
+        <div class="brand-mini">
+          <span class="brand-mark">W</span>
+          <span class="brand-copy">WEBFALL<small>NEW YORK / SECTOR 01</small></span>
+          <span id="owner-badge" class="owner-badge hidden">OWNER</span>
+        </div>
+        <div class="vitals">
+          <div class="vital-row">
+            <span class="vital-label">VITALS</span>
+            <div class="bar health"><i id="health-fill"></i><b id="health-text">100</b></div>
+          </div>
+          <div class="vital-row">
+            <span class="vital-label">STAMINA</span>
+            <div class="bar stamina"><i id="stamina-fill"></i></div>
+          </div>
+          <div class="vital-row">
+            <span class="vital-label">FOCUS</span>
+            <div class="bar focus"><i id="focus-fill"></i></div>
+          </div>
+        </div>
+        <div id="quest-panel" class="quest-panel">
+          <div class="quest-kicker"><span id="quest-count">01</span> / ACTIVE OBJECTIVE</div>
+          <h3 id="quest-title">The City Cries</h3>
+          <p id="quest-objective">Reach the Oracle's rooftop beacon.</p>
+          <div class="quest-distance"><span class="diamond"></span><span id="quest-distance">0 m</span></div>
+        </div>
+      </div>
+
+      <div class="hud-top-right">
+        <div class="map-frame">
+          <div class="map-header"><span>MANHATTAN GRID</span><span id="map-coords">40.71 N / 74.00 W</span></div>
+          <canvas id="minimap" width="220" height="220"></canvas>
+          <div class="map-footer"><span class="north">N</span><span id="map-zone">MIDTOWN</span><span id="map-time">20:41</span></div>
+        </div>
+        <div class="weather-chip"><span class="pulse-dot"></span><span id="zone-readout">NEON DISTRICT</span><b id="altitude-readout">0 M</b></div>
+      </div>
+
+      <div class="hud-center">
+        <div id="crosshair" class="crosshair"><i></i><span></span></div>
+        <div id="boss-wrap" class="boss-wrap hidden">
+          <div class="boss-top"><span id="boss-name">THE BROKER</span><span id="boss-phase">PHASE I</span></div>
+          <div class="boss-bar"><i id="boss-fill"></i></div>
+          <div id="boss-hint" class="boss-hint">Break his guard with heavy strikes.</div>
+        </div>
+      </div>
+
+      <div class="hud-bottom-left">
+        <div class="readout"><span>VELOCITY</span><b id="speed-readout">0</b><small>KM/H</small></div>
+        <div class="readout"><span>DESTRUCTION</span><b id="chaos-readout">0</b><small>CHAOS</small></div>
+        <div id="stance-readout" class="stance">PATROL / GROUNDED</div>
+      </div>
+
+      <div class="hud-bottom-center">
+        <div id="interact-prompt" class="interact-prompt hidden"><kbd>E</kbd><span id="interact-text">Talk</span></div>
+        <div class="ability-row">
+          <div class="ability" data-slot="Q"><kbd>Q</kbd><div><strong>SENSE</strong><small>Read the room</small></div><i class="cooldown" id="cd-sense"></i></div>
+          <div class="ability" data-slot="R"><kbd>R</kbd><div><strong>WEB BLAST</strong><small>Ranged strike</small></div><i class="cooldown" id="cd-blast"></i></div>
+          <div class="ability" data-slot="F"><kbd>F</kbd><div><strong>FLIGHT</strong><small id="flight-state">Locked</small></div><i class="cooldown" id="cd-flight"></i></div>
+          <div class="ability" data-slot="Shift"><kbd>SHIFT</kbd><div><strong>BOOST</strong><small>Sprint / thrust</small></div></div>
+        </div>
+      </div>
+
+      <div class="hud-bottom-right">
+        <div class="control-strip"><kbd>WASD</kbd> move <kbd>MOUSE</kbd> look <kbd>SPACE</kbd> jump</div>
+        <div class="control-strip"><kbd>LMB</kbd> punch / swing <kbd>E</kbd> interact <kbd>ESC</kbd> pause</div>
+      </div>
+
+      <div id="notification-stack" class="notification-stack"></div>
+      <div id="subtitle" class="subtitle hidden"></div>
+    </section>
+
+    <section id="start-screen" class="screen start-screen">
+      <div class="start-grain"></div>
+      <header class="start-nav">
+        <div class="nav-brand"><span class="brand-mark large">W</span><span>WEBFALL<small>AN OMG ORIGINAL</small></span></div>
+        <div class="nav-actions">
+          <button id="sound-toggle" class="icon-btn" aria-label="Toggle sound">SOUND ON</button>
+          <button id="fullscreen-toggle" class="icon-btn" aria-label="Toggle fullscreen">FULLSCREEN</button>
+        </div>
+      </header>
+
+      <div class="start-main">
+        <div class="start-copy">
+          <div class="eyebrow"><span class="line"></span> A NEW YORK THAT NEVER SLEEPS <span class="line"></span></div>
+          <h1><span>WEB</span>FALL</h1>
+          <p class="tagline">The skyline is your playground.<br>The universe is the final boss.</p>
+          <p class="intro-copy">Parkour across a living Manhattan. Swing from skyscrapers, shatter the streets, and climb from neon alleys to the edge of existence. Something ancient is pulling the city's strings. Cut them.</p>
+
+          <div class="start-actions">
+            <button id="start-button" class="primary-btn start-btn"><span>Start Game</span><i>ENTER THE CITY</i></button>
+            <button id="owner-button" class="ghost-btn">Owner Access</button>
+          </div>
+
+          <div class="start-meta">
+            <div><span>WORLD</span><strong>OPEN CITY + DEEP SPACE</strong></div>
+            <div><span>MODE</span><strong>3D / DESKTOP</strong></div>
+            <div><span>POWERS</span><strong>WEB / PARKOUR / GODHOOD</strong></div>
+          </div>
+        </div>
+
+        <aside class="start-aside">
+          <div class="transmission">
+            <div class="transmission-head"><span class="live-dot"></span> ENCRYPTED TRANSMISSION <b>NY-01</b></div>
+            <p class="quote">"The city has a pulse. Tonight, something is cutting it."</p>
+            <div class="speaker"><span class="speaker-avatar">O</span><div><strong>THE ORACLE</strong><small>FREQUENCY 88.4 / UNKNOWN LOCATION</small></div></div>
+            <div class="signal-bars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="controls-card">
+            <h2>FIELD MANUAL</h2>
+            <div class="control-grid">
+              <span><kbd>WASD</kbd> Move</span><span><kbd>MOUSE</kbd> Look</span>
+              <span><kbd>SPACE</kbd> Jump / climb</span><span><kbd>LMB</kbd> Punch / web-swing</span>
+              <span><kbd>RMB</kbd> Web zip</span><span><kbd>R</kbd> Web blast</span>
+              <span><kbd>Q</kbd> Spider sense</span><span><kbd>F</kbd> Flight</span>
+              <span><kbd>SHIFT</kbd> Sprint / boost</span><span><kbd>E</kbd> Interact</span>
+            </div>
+            <p class="tips">Swing low to build speed. Release at the top of the arc. The city rewards momentum.</p>
+          </div>
+        </aside>
+      </div>
+
+      <footer class="start-footer">
+        <span>NEW YORK, NY // 2026</span>
+        <div class="footer-pulse"><i></i><span>LIVE WORLD SIMULATION</span></div>
+        <span>BUILD 1.0.0 / DESKTOP EDITION</span>
+      </footer>
+    </section>
+
+    <section id="owner-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="owner-title">
+      <div class="modal-card owner-card">
+        <button class="modal-close" data-close="owner-modal" aria-label="Close">X</button>
+        <div class="modal-kicker">RESTRICTED PROTOCOL</div>
+        <h2 id="owner-title">OWNER ACCESS</h2>
+        <p>Speak the phrase. The circles will answer. Owner clearance grants godhood, every traversal power, and immunity beyond the known universe.</p>
+        <label for="owner-code">PASS PHRASE</label>
+        <input id="owner-code" type="text" autocomplete="off" spellcheck="false" placeholder="enter the phrase">
+        <div id="owner-message" class="owner-message" aria-live="polite"></div>
+        <button id="owner-submit" class="primary-btn">VERIFY CLEARANCE</button>
+        <small class="fine-print">This console logs failed attempts. You have been warned.</small>
+      </div>
+    </section>
+
+    <section id="help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="help-title">
+      <div class="modal-card">
+        <button class="modal-close" data-close="help-modal" aria-label="Close">X</button>
+        <div class="modal-kicker">FIELD MANUAL</div>
+        <h2 id="help-title">SURVIVE THE CLIMB</h2>
+        <div class="help-columns">
+          <div><h3>CITY</h3><p>Run, vault and climb. Wall-jump by holding toward a wall and pressing Space. Landing from great height hurts. Chain swings to keep momentum.</p></div>
+          <div><h3>COMBAT</h3><p>Left click punches nearby enemies. R fires a web blast. Q slows the world and reveals threats. Some villains must be stunned before they can be hurt.</p></div>
+          <div><h3>SPACE</h3><p>Unlock flight, then hold Shift while ascending. Cross the atmosphere to reach orbit. The Moon beacon begins the second act. The universe has an edge; do not touch it without godhood.</p></div>
+        </div>
+        <button class="primary-btn" data-close="help-modal">RETURN</button>
+      </div>
+    </section>
+
+    <section id="pause-screen" class="screen pause-screen hidden">
+      <div class="pause-card">
+        <div class="modal-kicker">PATROL SUSPENDED</div>
+        <h2>PAUSED</h2>
+        <div class="pause-stats">
+          <div><span>QUEST</span><strong id="pause-quest">The City Cries</strong></div>
+          <div><span>CHAOS</span><strong id="pause-chaos">0</strong></div>
+          <div><span>ALTITUDE</span><strong id="pause-altitude">0 M</strong></div>
+        </div>
+        <div class="pause-grid">
+          <button id="resume-button" class="primary-btn">RESUME PATROL</button>
+          <button id="pause-owner-button" class="ghost-btn">OWNER ACCESS</button>
+          <button id="quality-button" class="ghost-btn">QUALITY: HIGH</button>
+          <button id="restart-button" class="ghost-btn">RESTART RUN</button>
+          <button id="help-button" class="ghost-btn">FIELD MANUAL</button>
+          <button id="quit-button" class="ghost-btn">RETURN TO TITLE</button>
+        </div>
+        <p class="pause-note">The world keeps breathing while you are gone. So does the void.</p>
+      </div>
+    </section>
+
+    <section id="dialogue" class="dialogue hidden" aria-live="polite">
+      <div class="dialogue-portrait" id="dialogue-portrait">O</div>
+      <div class="dialogue-body">
+        <div class="dialogue-head"><span id="dialogue-speaker">THE ORACLE</span><small id="dialogue-role">FRIEND / SIGNAL</small></div>
+        <p id="dialogue-text"></p>
+        <div class="dialogue-actions"><span id="dialogue-choice-a"></span><span id="dialogue-choice-b"></span><button id="dialogue-next">CONTINUE <kbd>E</kbd></button></div>
+      </div>
+      <div class="dialogue-lines" id="dialogue-lines"></div>
+    </section>
+
+    <section id="cinematic" class="cinematic hidden">
+      <div class="cinematic-kicker" id="cinematic-kicker">SECTOR 02</div>
+      <h2 id="cinematic-title">LOW EARTH ORBIT</h2>
+      <p id="cinematic-sub">The city becomes a memory. The Moon is listening.</p>
+      <div class="cinematic-progress"><i></i></div>
+    </section>
+
+    <section id="death-screen" class="screen death-screen hidden">
+      <div class="death-card">
+        <div class="death-kicker" id="death-kicker">SIGNAL LOST</div>
+        <h2 id="death-title">YOU DIED</h2>
+        <p id="death-text">The city will remember the fall.</p>
+        <button id="respawn-button" class="primary-btn">RISE AGAIN</button>
+      </div>
+    </section>
+
+    <section id="ending-screen" class="screen ending-screen hidden">
+      <div class="ending-card">
+        <div class="ending-kicker">THE LAST CIRCLE IS BROKEN</div>
+        <h2>GODHOOD</h2>
+        <p id="ending-copy">You stepped past the edge of everything and found no wall waiting. The city is safe. The universe is yours.</p>
+        <div class="ending-stats">
+          <div><span>VILLAINS</span><strong id="ending-villains">0</strong></div>
+          <div><span>CHAOS</span><strong id="ending-chaos">0</strong></div>
+          <div><span>TIME</span><strong id="ending-time">00:00</strong></div>
+        </div>
+        <div class="ending-actions"><button id="continue-button" class="primary-btn">CONTINUE PATROL</button><button id="ending-restart" class="ghost-btn">BEGIN AGAIN</button></div>
+        <small>Owner protocol: the circles are defeated.</small>
+      </div>
+    </section>
+
+    <div id="loading" class="loading"><div class="loading-mark">W</div><span>ASSEMBLING MANHATTAN</span><i></i></div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
