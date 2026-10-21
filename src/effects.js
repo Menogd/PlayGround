@@ -167,6 +167,49 @@ export class Effects {
     }, 6);
   }
 
+  speedTrail(position, velocity, mode = 'air') {
+    const speed = velocity.length();
+    if (speed < 6) return;
+    const dir = velocity.clone().normalize();
+    const len = clamp(speed * 0.09, 2.4, 15);
+    const color = mode === 'zip' ? 0xffc657 : mode === 'fly' ? 0xd9f2ff : 0x62e6ff;
+    for (let i = 0; i < 2; i++) {
+      const geo = new THREE.CylinderGeometry(0.018, 0.06 + i * 0.02, len, 4, 1, true);
+      geo.translate(0, len / 2, 0);
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.32 - i * 0.08, blending: THREE.AdditiveBlending, depthWrite: false,
+      }));
+      mesh.position.copy(position).add(new THREE.Vector3(rand(-0.55, 0.55), rand(0.2, 1.7), rand(-0.55, 0.55)));
+      mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      this.add(mesh, (m, dt) => {
+        m.material.opacity = Math.max(0, m.material.opacity - dt * 2.4);
+        m.scale.x = Math.max(0.2, m.scale.x - dt * 1.5);
+        m.scale.z = m.scale.x;
+      }, 0.32);
+    }
+  }
+
+  dust(position, color = 0x9aa0ae) {
+    const group = new THREE.Group();
+    group.position.copy(position);
+    for (let i = 0; i < 7; i++) {
+      const puff = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this.glowTexture, color, transparent: true, opacity: 0.18, depthWrite: false,
+      }));
+      puff.position.set(rand(-0.7, 0.7), rand(0, 0.35), rand(-0.7, 0.7));
+      puff.scale.setScalar(rand(0.6, 1.4));
+      puff.userData.vel = new THREE.Vector3(rand(-2.4, 2.4), rand(0.4, 1.8), rand(-2.4, 2.4));
+      group.add(puff);
+    }
+    this.add(group, (g, dt) => {
+      for (const puff of g.children) {
+        puff.position.addScaledVector(puff.userData.vel, dt);
+        puff.material.opacity = Math.max(0, puff.material.opacity - dt * 0.55);
+        puff.scale.multiplyScalar(1 + dt * 0.9);
+      }
+    }, 0.55);
+  }
+
   spawnDebris(position, colors, count = 10, power = 10) {
     const capped = Math.min(count, this.maxDebris - this.debris.length);
     for (let i = 0; i < capped; i++) {

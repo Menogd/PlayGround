@@ -274,6 +274,7 @@ export function createCity(scene) {
     }
   }
 
+  const facadeMats = [];
   for (const style of BUILDING_STYLES) {
     const defs = buildingDefs[style];
     if (!defs.length) continue;
@@ -291,6 +292,8 @@ export function createCity(scene) {
       metalness: style === 'glass' ? 0.48 : 0.08,
       color: 0xffffff,
     });
+    mat.userData.style = style;
+    facadeMats.push(mat);
     const mesh = new THREE.InstancedMesh(geo, mat, defs.length);
     mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);
     const dummy = new THREE.Object3D();
@@ -372,6 +375,70 @@ export function createCity(scene) {
   });
   antennas.frustumCulled = false;
   rooftop.add(antennas);
+
+  const ventDefs = [];
+  const panelDefs = [];
+  const dishDefs = [];
+  const pipeDefs = [];
+  for (const b of allBuildings) {
+    if (rng() < 0.45) ventDefs.push({ x: b.x + (rng() - 0.5) * b.w * 0.6, z: b.z + (rng() - 0.5) * b.d * 0.6, y: b.top, r: 0.5 + rng() * 0.9 });
+    if (rng() < 0.22) panelDefs.push({ x: b.x + (rng() - 0.5) * b.w * 0.5, z: b.z + (rng() - 0.5) * b.d * 0.5, y: b.top, rx: -0.28 - rng() * 0.2 });
+    if (rng() < 0.16) dishDefs.push({ x: b.x + (rng() - 0.5) * b.w * 0.4, z: b.z + (rng() - 0.5) * b.d * 0.4, y: b.top, s: 0.8 + rng() * 1.2 });
+    if (rng() < 0.3) pipeDefs.push({ x: b.x + (rng() - 0.5) * b.w * 0.7, z: b.z + (rng() - 0.5) * b.d * 0.7, y: b.top, h: 2 + rng() * 8 });
+  }
+  const ventGeo = new THREE.CylinderGeometry(0.55, 0.75, 1.1, 7);
+  ventGeo.translate(0, 0.55, 0);
+  const ventMat = new THREE.MeshStandardMaterial({ color: 0x454b54, metalness: 0.35, roughness: 0.7 });
+  const vents = new THREE.InstancedMesh(ventGeo, ventMat, ventDefs.length);
+  ventDefs.forEach((d, i) => {
+    tDummy.position.set(d.x, d.y, d.z);
+    tDummy.scale.set(d.r, d.r, d.r);
+    tDummy.rotation.set(0, 0, 0);
+    tDummy.updateMatrix();
+    vents.setMatrixAt(i, tDummy.matrix);
+  });
+  vents.frustumCulled = false;
+  rooftop.add(vents);
+
+  const panelGeo = new THREE.BoxGeometry(3.4, 0.12, 2.1);
+  const panelMat = new THREE.MeshStandardMaterial({ color: 0x172c4a, metalness: 0.65, roughness: 0.28, emissive: 0x0a1b33, emissiveIntensity: 0.4 });
+  const panels = new THREE.InstancedMesh(panelGeo, panelMat, panelDefs.length);
+  panelDefs.forEach((d, i) => {
+    tDummy.position.set(d.x, d.y + 0.25, d.z);
+    tDummy.rotation.set(d.rx, rng() * TAU, 0);
+    tDummy.scale.setScalar(0.8 + rng() * 0.4);
+    tDummy.updateMatrix();
+    panels.setMatrixAt(i, tDummy.matrix);
+  });
+  panels.frustumCulled = false;
+  rooftop.add(panels);
+
+  const dishGeo = new THREE.CylinderGeometry(0.8, 0.9, 0.25, 10, 1, true);
+  const dishMat = new THREE.MeshStandardMaterial({ color: 0xb9bec6, metalness: 0.5, roughness: 0.45, side: THREE.DoubleSide });
+  const dishes = new THREE.InstancedMesh(dishGeo, dishMat, dishDefs.length);
+  dishDefs.forEach((d, i) => {
+    tDummy.position.set(d.x, d.y + 1.1, d.z);
+    tDummy.rotation.set(0.7, rng() * TAU, 0.3);
+    tDummy.scale.setScalar(d.s);
+    tDummy.updateMatrix();
+    dishes.setMatrixAt(i, tDummy.matrix);
+  });
+  dishes.frustumCulled = false;
+  rooftop.add(dishes);
+
+  const pipeGeo = new THREE.CylinderGeometry(0.09, 0.09, 1, 5);
+  pipeGeo.translate(0, 0.5, 0);
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x3d424a, metalness: 0.4, roughness: 0.7 });
+  const pipes = new THREE.InstancedMesh(pipeGeo, pipeMat, pipeDefs.length);
+  pipeDefs.forEach((d, i) => {
+    tDummy.position.set(d.x, d.y, d.z);
+    tDummy.rotation.set(0, 0, 0);
+    tDummy.scale.set(1, d.h, 1);
+    tDummy.updateMatrix();
+    pipes.setMatrixAt(i, tDummy.matrix);
+  });
+  pipes.frustumCulled = false;
+  rooftop.add(pipes);
 
   function addLandmarkBlock(x, z, w, d, h, color = 0x8d8b82, style = 'deco') {
     const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.66, metalness: 0.2 });
@@ -551,6 +618,108 @@ export function createCity(scene) {
   }
   tlights.frustumCulled = false;
   streetFurniture.add(tlights);
+
+  const stripeTransforms = [];
+  for (let zi = 0; zi < crossZ.length; zi += 2) {
+    const z = crossZ[zi];
+    for (const x of avenueX) {
+      for (let s = 0; s < 5; s++) {
+        stripeTransforms.push({ x: x - 8 + s * 4, y: 0.032, z: z + 9.2, sx: 2.1, sz: 0.9 });
+        stripeTransforms.push({ x: x + 9.2, y: 0.032, z: z - 8 + s * 4, sx: 0.9, sz: 2.1 });
+      }
+    }
+  }
+  const stripeGeo = new THREE.BoxGeometry(1, 0.02, 1);
+  const stripeMat = new THREE.MeshStandardMaterial({ color: 0xd8dde3, roughness: 0.8, emissive: 0x22262c, emissiveIntensity: 0.2 });
+  const stripes = new THREE.InstancedMesh(stripeGeo, stripeMat, stripeTransforms.length);
+  stripeTransforms.forEach((t, i) => {
+    fDummy.position.set(t.x, t.y, t.z);
+    fDummy.rotation.set(0, 0, 0);
+    fDummy.scale.set(t.sx, 1, t.sz);
+    fDummy.updateMatrix();
+    stripes.setMatrixAt(i, fDummy.matrix);
+  });
+  stripes.frustumCulled = false;
+  streetFurniture.add(stripes);
+
+  const hydrantGeo = new THREE.CylinderGeometry(0.18, 0.22, 0.8, 6);
+  hydrantGeo.translate(0, 0.4, 0);
+  const hydrantMat = new THREE.MeshStandardMaterial({ color: 0xa8322f, roughness: 0.5, metalness: 0.3 });
+  const hydrantCount = 34;
+  const hydrants = new THREE.InstancedMesh(hydrantGeo, hydrantMat, hydrantCount);
+  for (let i = 0; i < hydrantCount; i++) {
+    const avenue = avenueX[Math.floor(rng() * avenueX.length)];
+    fDummy.position.set(avenue + (rng() > 0.5 ? 12 : -12), 0.3, -900 + rng() * 1850);
+    fDummy.rotation.set(0, 0, 0);
+    fDummy.scale.setScalar(1);
+    fDummy.updateMatrix();
+    hydrants.setMatrixAt(i, fDummy.matrix);
+  }
+  hydrants.frustumCulled = false;
+  streetFurniture.add(hydrants);
+
+  const binGeo = new THREE.BoxGeometry(0.9, 1.1, 0.9);
+  binGeo.translate(0, 0.55, 0);
+  const binMat = new THREE.MeshStandardMaterial({ color: 0x1f3a2f, roughness: 0.75, metalness: 0.4 });
+  const binCount = 46;
+  const bins = new THREE.InstancedMesh(binGeo, binMat, binCount);
+  for (let i = 0; i < binCount; i++) {
+    const avenue = avenueX[Math.floor(rng() * avenueX.length)];
+    fDummy.position.set(avenue + (rng() > 0.5 ? 12.5 : -12.5), 0.3, -900 + rng() * 1850);
+    fDummy.rotation.set(0, rng() * TAU, 0);
+    fDummy.scale.setScalar(0.85 + rng() * 0.35);
+    fDummy.updateMatrix();
+    bins.setMatrixAt(i, fDummy.matrix);
+  }
+  bins.frustumCulled = false;
+  streetFurniture.add(bins);
+
+  const cartGroup = new THREE.Group();
+  for (let i = 0; i < 9; i++) {
+    const avenue = avenueX[2 + Math.floor(rng() * 5)] + (rng() > 0.5 ? 12 : -12);
+    const cz = -600 + rng() * 1500;
+    const cart = new THREE.Group();
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.15, 1.4), new THREE.MeshStandardMaterial({ color: 0x8a8f98, metalness: 0.55, roughness: 0.4 }));
+    cabin.position.y = 0.9;
+    cart.add(cabin);
+    const umbrella = new THREE.Mesh(new THREE.ConeGeometry(1.7, 0.5, 8), new THREE.MeshStandardMaterial({ color: i % 2 ? 0xb52b34 : 0x2b5fb5, roughness: 0.7, side: THREE.DoubleSide }));
+    umbrella.position.y = 2.35;
+    cart.add(umbrella);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.2, 5), new THREE.MeshStandardMaterial({ color: 0x565b63, metalness: 0.6 }));
+    pole.position.y = 1.7;
+    cart.add(pole);
+    const glow = new THREE.PointLight(0xffb066, 0.65, 9, 2);
+    glow.position.set(0, 1.5, 0);
+    cart.add(glow);
+    cart.position.set(avenue, 0.3, cz);
+    cart.rotation.y = rng() * TAU;
+    cartGroup.add(cart);
+  }
+  streetFurniture.add(cartGroup);
+
+  const steamTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(64, 64, 2, 64, 64, 62);
+    g.addColorStop(0, 'rgba(220,230,245,.3)');
+    g.addColorStop(0.5, 'rgba(180,195,220,.12)');
+    g.addColorStop(1, 'rgba(120,140,170,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 128, 128);
+    const t = new THREE.CanvasTexture(c);
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  })();
+  const steamGroup = new THREE.Group();
+  for (let i = 0; i < 12; i++) {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex, transparent: true, depthWrite: false, opacity: 0.35 }));
+    sprite.position.set(avenueX[Math.floor(rng() * avenueX.length)] + (rng() - 0.5) * 14, 0.8, -800 + rng() * 1700);
+    sprite.scale.set(3 + rng() * 3, 5 + rng() * 6, 1);
+    sprite.userData.phase = rng() * TAU;
+    steamGroup.add(sprite);
+  }
+  streetFurniture.add(steamGroup);
   root.add(streetFurniture);
 
   const signWords = ['DELI', 'PIZZA', 'BROADWAY', '24 HOUR', 'SUBWAY', 'NOODLES', 'OSCORP', 'DAILY BUGLE', 'NEON', 'ARCADE', 'HOTEL', 'ROOFTOP'];
@@ -874,6 +1043,124 @@ export function createCity(scene) {
   sunSprite.scale.set(700, 700, 1);
   scene.add(sunSprite);
 
+  const planet = new THREE.Group();
+  const planetBody = new THREE.Mesh(
+    new THREE.SphereGeometry(130, 32, 24),
+    new THREE.MeshStandardMaterial({ color: 0x26395e, emissive: 0x0b1428, emissiveIntensity: 0.85, roughness: 0.92, metalness: 0.05 }),
+  );
+  planet.add(planetBody);
+  const planetRing = new THREE.Mesh(
+    new THREE.TorusGeometry(185, 2.4, 6, 64),
+    new THREE.MeshBasicMaterial({ color: 0x7aa6d8, transparent: true, opacity: 0.22, depthWrite: false }),
+  );
+  planetRing.rotation.x = Math.PI * 0.42;
+  planetRing.rotation.z = 0.3;
+  planet.add(planetRing);
+  const planetMoon = new THREE.Mesh(
+    new THREE.SphereGeometry(13, 12, 10),
+    new THREE.MeshStandardMaterial({ color: 0xb9bec8, roughness: 1 }),
+  );
+  planetMoon.position.set(230, 42, 30);
+  planet.add(planetMoon);
+  planet.position.set(1250, 690, -1850);
+  planet.rotation.z = -0.22;
+  scene.add(planet);
+
+  const rainCount = 1700;
+  const rainPositions = new Float32Array(rainCount * 3);
+  for (let i = 0; i < rainCount; i++) {
+    rainPositions[i * 3] = (rng() - 0.5) * 110;
+    rainPositions[i * 3 + 1] = (rng() - 0.3) * 65;
+    rainPositions[i * 3 + 2] = (rng() - 0.5) * 110;
+  }
+  function makeWeatherMap(kind) {
+    const c = document.createElement('canvas');
+    c.width = 32;
+    c.height = 64;
+    const ctx = c.getContext('2d');
+    ctx.clearRect(0, 0, 32, 64);
+    if (kind === 'rain') {
+      const g = ctx.createLinearGradient(16, 0, 16, 64);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.45, 'rgba(255,255,255,.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(16, 2);
+      ctx.lineTo(16, 62);
+      ctx.stroke();
+    } else {
+      const g = ctx.createRadialGradient(16, 32, 0, 16, 32, 26);
+      g.addColorStop(0, 'rgba(255,255,255,1)');
+      g.addColorStop(0.35, 'rgba(255,255,255,.75)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, 32, 64);
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }
+  const weatherMaps = { rain: makeWeatherMap('rain'), ash: makeWeatherMap('ash'), sparks: makeWeatherMap('spark') };
+  const rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3));
+  const rainMat = new THREE.PointsMaterial({ color: 0xa9c9e8, size: 0.34, map: weatherMaps.rain, alphaTest: 0.02, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const weatherPoints = new THREE.Points(rainGeo, rainMat);
+  weatherPoints.frustumCulled = false;
+  scene.add(weatherPoints);
+  const weather = { kind: 'clear', speed: 0, wind: 0, opacity: 0, points: weatherPoints, mat: rainMat, positions: rainPositions };
+
+  function setWeather(kind) {
+    weather.kind = kind;
+    if (kind === 'rain') {
+      weather.speed = 46; weather.wind = 5; weather.targetOpacity = 0.85;
+      weather.mat.map = weatherMaps.rain; weather.mat.alphaTest = 0.02;
+      weather.mat.color.setHex(0x9fc4e8); weather.mat.size = 1.15; weather.mat.blending = THREE.AdditiveBlending;
+    } else if (kind === 'ash') {
+      weather.speed = 2.6; weather.wind = 1.2; weather.targetOpacity = 0.65;
+      weather.mat.map = weatherMaps.ash; weather.mat.alphaTest = 0.01;
+      weather.mat.color.setHex(0xd8cfc2); weather.mat.size = 0.55; weather.mat.blending = THREE.NormalBlending;
+    } else if (kind === 'sparks') {
+      weather.speed = -9; weather.wind = 3.5; weather.targetOpacity = 0.9;
+      weather.mat.map = weatherMaps.sparks; weather.mat.alphaTest = 0.01;
+      weather.mat.color.setHex(0xff6a3c); weather.mat.size = 0.7; weather.mat.blending = THREE.AdditiveBlending;
+    } else {
+      weather.speed = 0; weather.wind = 0; weather.targetOpacity = 0;
+    }
+    weather.mat.needsUpdate = true;
+  }
+
+  const rifts = [];
+  const riftDefs = [
+    { name: 'PRIME', position: new THREE.Vector3(-274, 54.7, 535), color: 0x5fe3ff },
+    { name: 'NEON', position: new THREE.Vector3(4, 2.3, 292), color: 0xff4fd8 },
+    { name: 'NOIR', position: new THREE.Vector3(-12, 2.3, -318), color: 0xe8d9b0 },
+  ];
+  for (const def of riftDefs) {
+    const group = new THREE.Group();
+    group.position.copy(def.position);
+    const ringMat = new THREE.MeshBasicMaterial({ color: def.color, transparent: true, opacity: 0.85, depthWrite: false });
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.13, 8, 40), ringMat);
+    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.8, 0.05, 6, 36), ringMat.clone());
+    ring2.material.opacity = 0.5;
+    ring2.rotation.y = Math.PI / 3;
+    const coreMat = new THREE.MeshBasicMaterial({ color: def.color, transparent: true, opacity: 0.14, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending });
+    const core = new THREE.Mesh(new THREE.CircleGeometry(2.1, 32), coreMat);
+    const glyph = makeLabelSprite('RIFT // E', {
+      color: `#${def.color.toString(16).padStart(6, '0')}`,
+      bg: 'rgba(3,7,13,.78)',
+      border: 'rgba(255,255,255,.28)',
+      font: '700 28px Arial',
+      scale: 0.42,
+    });
+    glyph.position.y = 3.5;
+    const light = new THREE.PointLight(def.color, 4, 20, 2);
+    group.add(ring, ring2, core, glyph, light);
+    root.add(group);
+    rifts.push({ name: def.name, position: def.position.clone(), group, ring, ring2, core, glyph, phase: rng() * TAU, color: def.color });
+  }
+
   const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 2.4, 90, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xff2b45, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthWrite: false }));
   beacon.position.set(55, GROUND_Y + 78 + 45, 170);
   root.add(beacon);
@@ -928,6 +1215,49 @@ export function createCity(scene) {
     landmarks.oracleBeacon.material.opacity = 0.13 + Math.sin(elapsed * 2) * 0.06;
     starMat.opacity = clamp((playerPos?.y || 0) / 1500, 0, 0.72);
     sunSprite.material.opacity = clamp(1 - (playerPos?.y || 0) / 2600, 0.15, 1);
+
+    planet.rotation.y += dt * 0.012;
+    planetMoon.rotation.y += dt * 0.4;
+    planetRing.rotation.z += dt * 0.006;
+
+    for (const s of steamGroup.children) {
+      s.position.y = 0.8 + Math.sin(elapsed * 0.7 + s.userData.phase) * 0.25;
+      s.material.opacity = 0.2 + Math.sin(elapsed * 1.1 + s.userData.phase) * 0.08;
+    }
+
+    for (const rift of rifts) {
+      rift.ring.rotation.z += dt * 0.9;
+      rift.ring.rotation.y += dt * 0.35;
+      rift.ring2.rotation.z -= dt * 1.2;
+      const pulse = 0.5 + Math.sin(elapsed * 2.4 + rift.phase) * 0.5;
+      rift.core.material.opacity = 0.1 + pulse * 0.16;
+      rift.core.scale.setScalar(0.94 + pulse * 0.08);
+      rift.group.position.y = rift.position.y + Math.sin(elapsed * 1.3 + rift.phase) * 0.16;
+      rift.glyph.position.y = 3.5 + Math.sin(elapsed * 1.7 + rift.phase) * 0.12;
+    }
+
+    weather.mat.opacity += ((weather.targetOpacity || 0) - weather.mat.opacity) * Math.min(1, dt * 1.4);
+    if (weather.speed !== 0) {
+      const px = playerPos?.x ?? 0;
+      const py = playerPos?.y ?? 0;
+      const pz = playerPos?.z ?? 0;
+      weatherPoints.position.set(px, py, pz);
+      for (let i = 0; i < rainCount; i++) {
+        const iy = i * 3 + 1;
+        weather.positions[iy] -= weather.speed * dt;
+        weather.positions[i * 3] += weather.wind * dt;
+        if (weather.speed > 0 && weather.positions[iy] < -24) {
+          weather.positions[iy] = 34;
+          weather.positions[i * 3] = (rng() - 0.5) * 110;
+          weather.positions[i * 3 + 2] = (rng() - 0.5) * 110;
+        } else if (weather.speed < 0 && weather.positions[iy] > 34) {
+          weather.positions[iy] = -24;
+          weather.positions[i * 3] = (rng() - 0.5) * 110;
+          weather.positions[i * 3 + 2] = (rng() - 0.5) * 110;
+        }
+      }
+      rainGeo.attributes.position.needsUpdate = true;
+    }
   }
 
   function zoneAt(position) {
@@ -946,7 +1276,8 @@ export function createCity(scene) {
 
   return {
     root, scene, colliders, hittables, destructibles, signs, traffic, pedestrians,
-    landmarks, questAnchors, sky, stars, clouds, water, sunSprite, hemi, sun,
+    landmarks, questAnchors, sky, stars, clouds, water, sunSprite, hemi, sun, rim, fill,
+    facadeMats, rifts, setWeather, weather, planet,
     update, zoneAt, clampPlayer, groundY: GROUND_Y, bounds: CITY_BOUNDS,
     createCar,
   };

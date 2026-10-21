@@ -145,6 +145,13 @@ export class UI {
     this.$('cd-flight').style.transform = `scaleY(${player.flightUnlocked ? 0 : 1})`;
     this.$('zone-readout').textContent = game.zone;
     this.$('owner-badge').classList.toggle('hidden', !game.owner);
+    if (game.universe) {
+      this.$('universe-name').textContent = `${game.universe.name} // ${game.universe.subtitle}`;
+      const chip = this.$('universe-chip');
+      chip.style.setProperty('--universe-accent', game.universe.accent);
+      chip.style.setProperty('--universe-accent-2', game.universe.accent2);
+      chip.title = game.universe.tagline;
+    }
 
     const pos = player.group.position;
     const zone = game.zone || 'MIDTOWN';
@@ -200,6 +207,17 @@ export class UI {
       ctx.lineTo(w - 4, mz);
       ctx.stroke();
     }
+    if (game.mode === 'city') {
+      for (const rift of game.city.rifts) {
+        const rx = clamp(rift.position.x / 340 * (w / 2) + w / 2, 6, w - 6);
+        const rz = clamp(rift.position.z / 1100 * (h / 2) + h / 2, 6, h - 6);
+        ctx.strokeStyle = `#${rift.color.toString(16).padStart(6, '0')}`;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(rx, rz, 3 + Math.sin(game.elapsed * 3 + rift.phase) * 1.2, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
     const marker = game.questMarkerPosition;
     if (marker) {
       const mx = clamp(marker.x / 340 * (w / 2) + w / 2, 6, w - 6);
@@ -244,6 +262,10 @@ export class UI {
     this.$('quest-objective').textContent = quest.objective;
     this.$('quest-distance').textContent = distance === null || distance === undefined ? '--' : `${Math.round(distance)} m`;
     this.$('pause-quest').textContent = quest.title;
+  }
+
+  setQuestDistance(distance) {
+    this.$('quest-distance').textContent = distance === null || distance === undefined ? '--' : `${Math.round(distance)} m`;
   }
 
   setBoss(boss) {

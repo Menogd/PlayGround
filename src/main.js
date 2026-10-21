@@ -7,6 +7,7 @@ import { Player } from './player.js';
 import { EnemyManager } from './enemies.js';
 import { Effects } from './effects.js';
 import { createOrbitWorld, createDeepSpaceWorld } from './space.js';
+import { UNIVERSES, applyUniverse, getUniverse } from './multiverse.js';
 
 const DIALOGUES = {
   intro: [
@@ -104,6 +105,8 @@ class Game {
     this.senseActive = 0;
     this.beyond = false;
     this.raycaster = new THREE.Raycaster();
+    this.universeIndex = 0;
+    this.universe = UNIVERSES[0];
 
     this.ui = new UI({
       onStart: () => this.start(),
@@ -136,6 +139,7 @@ class Game {
   setupScenes() {
     this.cityScene = new THREE.Scene();
     this.city = createCity(this.cityScene);
+    this.universe = applyUniverse(this.universeIndex, this.city);
     this.activeScene = this.cityScene;
     this.effects = new Effects(this.cityScene);
     this.player = new Player(this.cityScene, this.camera, this.canvas, this.city, {
@@ -152,6 +156,16 @@ class Game {
       onWebZip: () => this.audio.play('thwip'),
       onZipArrive: () => this.audio.play('hit'),
       onMantle: () => { this.audio.play('jump'); this.ui.notify('MANTLE', 'cyan'); },
+      onFlip: (kind) => {
+        this.audio.play('swing');
+        this.effects.ring(this.player.group.position, 0x62e6ff, 3.2, 0.28);
+        if (kind === 'side') this.ui.notify('PARKOUR // SIDE FLIP', 'cyan');
+      },
+      onRoll: () => this.effects.dust(this.player.group.position, 0xb8c0cc),
+      onTrail: (position, velocity, mode) => this.effects.speedTrail(position, velocity, mode),
+      onFootstep: (position) => {
+        if (this.player.mode === 'ground') this.effects.dust(position, 0x8d939e);
+      },
       onDamage: (amount) => { this.audio.play('hurt'); this.ui.damageFlash(); this.camShake(0.3 + amount * 0.01); },
       onDeath: () => this.die('You fell in the line of duty.'),
       onVoidFall: () => this.die('The river took you.'),
@@ -237,6 +251,7 @@ class Game {
         case 'KeyE': this.interact(); break;
         case 'KeyR': this.webBlast(); break;
         case 'KeyQ': this.spiderSense(); break;
+        case 'KeyM': this.cycleUniverse(event.shiftKey ? -1 : 1); break;
         case 'KeyG':
           if (this.owner) this.grantOwner(true);
           break;
@@ -510,9 +525,34 @@ class Game {
     this.audio.play('quest');
   }
 
+  cycleUniverse(direction = 1) {
+    if (this.mode !== 'city') {
+      this.ui.notify('MULTIVERSE ANCHOR UNAVAILABLE OUTSIDE MANHATTAN', 'gold');
+      return;
+    }
+    if (this.transitioning || this.paused || this.dead) return;
+    const len = UNIVERSES.length;
+    this.universeIndex = ((this.universeIndex + direction) % len + len) % len;
+    this.universe = applyUniverse(this.universeIndex, this.city);
+    const color = parseInt(this.universe.accent.slice(1), 16);
+    this.effects.portalBurst(this.player.group.position, color);
+    this.effects.ring(this.player.group.position, color, 14, 0.6);
+    this.audio.play('transition');
+    this.camShake(0.35);
+    this.ui.notify(`MULTIVERSE SHIFT // ${this.universe.name} ${this.universe.subtitle}`, 'cyan');
+    this.ui.subtitle(this.universe.tagline, 2.6);
+  }
+
   interact() {
     if (this.mode === 'city') {
       const p = this.player.group.position;
+      const rift = this.city.rifts.find((r) => p.distanceTo(r.position) < 5.5);
+      if (rift) {
+        const index = UNIVERSES.findIndex((u) => u.name.endsWith(rift.name === 'PRIME' ? '616' : rift.name === 'NEON' ? '1610' : '90214'));
+        const direction = index === this.universeIndex ? 1 : index - this.universeIndex;
+        this.cycleUniverse(index >= 0 ? direction : 1);
+        return;
+      }
       if (this.questIndex === 0 && p.distanceTo(this.city.questAnchors.oracle) < 9) {
         this.ui.showDialogue(DIALOGUES.oracle, () => this.advanceQuest());
         return;
@@ -1093,6 +1133,8 @@ class Game {
     let prompt = null;
     if (this.mode === 'city') {
       const p = this.player.group.position;
+      const rift = this.city.rifts.find((r) => p.distanceTo(r.position) < 5.5);
+      if (rift) prompt = `Shift reality // ${rift.name} RIFT`;
       if (this.questIndex === 0 && p.distanceTo(this.city.questAnchors.oracle) < 9) prompt = 'Hear the Oracle';
       if (this.questIndex === 1) {
         for (const cache of this.caches) {
@@ -1118,7 +1160,7 @@ class Game {
         distance = this.player.group.position.distanceTo(target);
       }
     }
-    this.ui.setQuest({ index: this.questIndex + 1, ...this.quest }, distance);
+    this.ui.setQuestDistance(distance);
     if (this.enemies.getBoss()) this.ui.setBoss(this.enemies.getBoss());
   }
 

@@ -76,32 +76,40 @@ function createPlayerModel() {
   group.name = 'player';
   const body = new THREE.Group();
   group.add(body);
+  const upperBody = new THREE.Group();
+  body.add(upperBody);
 
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.27, 0.64, 8), red);
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.31, 0.27, 0.64, 10), red);
   torso.position.y = 1.31;
   torso.scale.z = 0.72;
-  body.add(torso);
+  upperBody.add(torso);
 
   const chest = new THREE.Mesh(new THREE.BoxGeometry(0.57, 0.34, 0.3), red);
   chest.position.set(0, 1.48, 0);
-  body.add(chest);
+  upperBody.add(chest);
 
   const abdomen = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.22, 0.25), blue);
   abdomen.position.set(0, 1.0, 0);
-  body.add(abdomen);
+  upperBody.add(abdomen);
 
   const belt = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.12, 0.26), black);
   belt.position.set(0, 0.93, 0);
-  body.add(belt);
+  upperBody.add(belt);
+  const pouchGeo = new THREE.BoxGeometry(0.1, 0.09, 0.06);
+  for (const side of [-1, 1]) {
+    const pouch = new THREE.Mesh(pouchGeo, black);
+    pouch.position.set(side * 0.16, 0.91, -0.16);
+    upperBody.add(pouch);
+  }
 
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.15, 6), red);
   neck.position.y = 1.67;
-  body.add(neck);
+  upperBody.add(neck);
 
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 12, 10), red);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 12), red);
   head.scale.set(0.92, 1.08, 0.9);
   head.position.y = 1.84;
-  body.add(head);
+  upperBody.add(head);
 
   const lensShape = makeLensShape();
   const lensGeo = new THREE.ShapeGeometry(lensShape);
@@ -110,12 +118,12 @@ function createPlayerModel() {
     lens.scale.set(side > 0 ? 1 : -1, 1, 1);
     lens.position.set(side * 0.1, 1.86, -0.205);
     lens.rotation.x = -0.1;
-    body.add(lens);
+    upperBody.add(lens);
     const rim = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.014, 4, 10), black);
     rim.scale.set(1.25, 0.7, 1);
     rim.position.set(side * 0.1, 1.855, -0.202);
     rim.rotation.z = side > 0 ? -0.1 : 0.1;
-    body.add(rim);
+    upperBody.add(rim);
   }
 
   const spider = new THREE.Group();
@@ -129,13 +137,36 @@ function createPlayerModel() {
     spider.add(leg);
   }
   spider.position.set(0, 1.43, -0.156);
-  body.add(spider);
+  upperBody.add(spider);
 
-  const leftArm = addLimb(body, new THREE.Vector3(-0.39, 1.53, 0), 0.34, 0.16, red, 0.34, 0.14);
-  const rightArm = addLimb(body, new THREE.Vector3(0.39, 1.53, 0), 0.34, 0.16, red, 0.34, 0.14);
+  const backSpider = spider.clone();
+  backSpider.position.set(0, 1.42, 0.158);
+  backSpider.scale.z = -1;
+  upperBody.add(backSpider);
+
+  for (const side of [-1, 1]) {
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 7), red);
+    shoulder.position.set(side * 0.37, 1.53, 0);
+    shoulder.scale.set(1.1, 0.85, 0.95);
+    upperBody.add(shoulder);
+    const shoulderTrim = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.018, 4, 12), black);
+    shoulderTrim.position.set(side * 0.39, 1.5, 0);
+    shoulderTrim.rotation.y = Math.PI / 2;
+    upperBody.add(shoulderTrim);
+  }
+
+  const leftArm = addLimb(upperBody, new THREE.Vector3(-0.39, 1.53, 0), 0.34, 0.16, red, 0.34, 0.14);
+  const rightArm = addLimb(upperBody, new THREE.Vector3(0.39, 1.53, 0), 0.34, 0.16, red, 0.34, 0.14);
   leftArm.lower.children[0].material = blue;
   rightArm.lower.children[0].material = blue;
-  const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), red);
+  const shooterGeo = new THREE.CylinderGeometry(0.055, 0.045, 0.16, 6);
+  for (const arm of [leftArm, rightArm]) {
+    const shooter = new THREE.Mesh(shooterGeo, black);
+    shooter.position.set(0, -0.23, -0.03);
+    shooter.rotation.x = Math.PI / 2;
+    arm.lower.add(shooter);
+  }
+  const leftHand = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), red);
   leftHand.position.y = -0.37;
   leftArm.lower.add(leftHand);
   const rightHand = leftHand.clone();
@@ -146,6 +177,12 @@ function createPlayerModel() {
   const rightLeg = addLimb(body, new THREE.Vector3(0.17, 0.88, 0), 0.42, 0.2, blue, 0.4, 0.17);
   leftLeg.lower.children[0].material = red;
   rightLeg.lower.children[0].material = red;
+  for (const leg of [leftLeg, rightLeg]) {
+    const knee = new THREE.Mesh(new THREE.SphereGeometry(0.09, 7, 6), blue);
+    knee.scale.set(1, 0.7, 0.85);
+    knee.position.set(0, 0, -0.015);
+    leg.upper.add(knee);
+  }
   const leftFoot = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.34), redDark);
   leftFoot.position.set(0, -0.42, -0.07);
   leftLeg.lower.add(leftFoot);
@@ -154,8 +191,8 @@ function createPlayerModel() {
   rightLeg.lower.add(rightFoot);
 
   return {
-    group, body, torso, chest, leftArm, rightArm, leftLeg, rightLeg,
-    leftHand, rightHand, head, materials: { red, blue, black, white },
+    group, body, upperBody, torso, chest, leftArm, rightArm, leftLeg, rightLeg,
+    leftHand, rightHand, head, materials: { red, redDark, blue, black, white },
   };
 }
 
@@ -173,7 +210,11 @@ export class Player {
     this.group.position.set(0, GROUND_Y, 560);
     scene.add(this.group);
     this.model = createPlayerModel();
-    this.group.add(this.model.group);
+    this.flipGroup = new THREE.Group();
+    this.flipGroup.position.y = 0.95;
+    this.model.group.position.y = -0.95;
+    this.flipGroup.add(this.model.group);
+    this.group.add(this.flipGroup);
     this.group.rotation.y = 0;
 
     this.velocity = new THREE.Vector3();
@@ -210,6 +251,19 @@ export class Player {
     this.senseGlow = 0;
     this.landTimer = 0;
     this.runPhase = 0;
+    this.idlePhase = 0;
+    this.flipTime = 0;
+    this.flipDuration = 0;
+    this.flipKind = 'back';
+    this.flipSide = 0;
+    this.rollTime = 0;
+    this.rollDuration = 0.46;
+    this.mantleTime = 0;
+    this.climbing = false;
+    this.releaseTimer = 0;
+    this.trailTimer = 0;
+    this.stepTimer = 0;
+    this.swingSide = 1;
     this.swingAnchor = new THREE.Vector3();
     this.ropeLength = 0;
     this.swingTimer = 0;
@@ -342,6 +396,12 @@ export class Player {
     this.invulnerable = 0;
     this.spaceMode = false;
     this.doubleJumped = false;
+    this.flipTime = 0;
+    this.rollTime = 0;
+    this.mantleTime = 0;
+    this.releaseTimer = 0;
+    this.flipGroup.rotation.set(0, 0, 0);
+    this.flipGroup.position.y = 0.95;
     this.detachWeb();
     this.updateCamera(0.016, true);
   }
@@ -406,6 +466,10 @@ export class Player {
     this.swingAnchor.copy(anchor);
     this.ropeLength = clamp(dist, 7, 118);
     this.swingTimer = 0;
+    const right = this.getRight();
+    this.swingSide = anchor.clone().sub(this.group.position).dot(right) >= 0 ? 1 : -1;
+    this.flipTime = 0;
+    this.rollTime = 0;
     this.velocity.y = Math.max(this.velocity.y, 1.5);
     const forward = this.getFlatForward();
     const current = this.velocity.length();
@@ -427,6 +491,7 @@ export class Player {
     if (this.mode === 'swing' || this.mode === 'zip') {
       this.mode = this.onGround ? 'ground' : 'air';
       if (this.mode === 'air') this.velocity.y += 3.2;
+      this.releaseTimer = 0.4;
     }
     this.webTarget = null;
     this.webMesh.visible = false;
@@ -490,6 +555,7 @@ export class Player {
 
     this.updateCamera(dt, false);
     this.updateModel(dt, elapsed);
+    this.emitTraversalFx(dt);
     this.updateShadow();
     if (this.senseGlow > 0) this.model.materials.white.emissiveIntensity = 1.4 + Math.sin(elapsed * 20) * 0.6;
     else this.model.materials.white.emissiveIntensity = 0.65;
@@ -510,10 +576,37 @@ export class Player {
     return dir;
   }
 
+  startFlip(kind = null) {
+    const side = this.keys.has('KeyD') ? 1 : this.keys.has('KeyA') ? -1 : 0;
+    this.flipKind = kind || (side !== 0 ? 'side' : this.keys.has('KeyW') ? 'front' : 'back');
+    this.flipSide = side || 1;
+    this.flipDuration = this.flipKind === 'side' ? 0.56 : 0.62;
+    this.flipTime = this.flipDuration;
+    this.rollTime = 0;
+    this.callbacks.onFlip?.(this.flipKind);
+  }
+
+  startRoll() {
+    if (this.rollTime > 0 || this.flipTime > 0) return;
+    this.rollTime = this.rollDuration;
+    this.callbacks.onRoll?.();
+  }
+
+  emitTraversalFx(dt) {
+    this.trailTimer -= dt;
+    if (this.trailTimer > 0) return;
+    const speed = this.velocity.length();
+    if (this.mode === 'swing' || this.mode === 'zip' || (this.mode === 'fly' && speed > 26) || (!this.onGround && speed > 22)) {
+      this.trailTimer = this.mode === 'fly' ? 0.05 : 0.065;
+      this.callbacks.onTrail?.(this.group.position, this.velocity, this.mode);
+    }
+  }
+
   updateRunAndAir(dt) {
     const input = this.getInputVector();
     const sprint = (this.keys.has('ShiftLeft') || this.keys.has('ShiftRight')) && this.stamina > 0;
     const speed = (sprint ? 13.5 : 8.2) * this.speedBoost;
+    this.climbing = false;
 
     if (this.onGround) {
       const target = input.clone().multiplyScalar(speed);
@@ -545,6 +638,7 @@ export class Player {
             this.jumpBuffer = 0;
             this.doubleJumped = true;
             this.velocity.y = 9.2;
+            this.startFlip();
             this.callbacks.onJump?.(true);
           } else if (this.wallContact && this.stamina > 3) {
             this.jumpBuffer = 0;
@@ -569,6 +663,8 @@ export class Player {
         this.climbStamina += dt;
         const climbSpeed = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight') ? 9.5 : 6.5;
         this.velocity.y = climbSpeed;
+        this.climbing = true;
+        this.runPhase += dt * 9;
         this.callbacks.onClimb?.(dt);
       }
     }
@@ -735,6 +831,7 @@ export class Player {
         this.onGround = true;
         this.mode = 'ground';
         this.doubleJumped = false;
+        this.mantleTime = 0.42;
         this.callbacks.onMantle?.(this.wallTop);
       }
       if (this.onGround && pos.y < GROUND_Y) pos.y = GROUND_Y;
@@ -763,8 +860,9 @@ export class Player {
     else if (impact > 34) this.callbacks.onHardLand?.(impact);
     if (impact > 20) {
       this.shake = Math.min(0.55, this.shake + impact * 0.008);
-      this.landTimer = 0.2;
+      this.landTimer = Math.max(this.landTimer, Math.min(0.34, impact * 0.008));
     }
+    if (impact > 26 && Math.hypot(this.velocity.x, this.velocity.z) > 10) this.startRoll();
     this.callbacks.onLand?.(impact, support);
   }
 
@@ -801,6 +899,12 @@ export class Player {
   updateModel(dt, elapsed) {
     const model = this.model;
     const speed = Math.hypot(this.velocity.x, this.velocity.z);
+    this.idlePhase += dt;
+    this.flipTime = Math.max(0, this.flipTime - dt);
+    this.rollTime = Math.max(0, this.rollTime - dt);
+    this.mantleTime = Math.max(0, this.mantleTime - dt);
+    this.releaseTimer = Math.max(0, this.releaseTimer - dt);
+
     let targetYaw = this.group.rotation.y;
     if (speed > 0.4) targetYaw = Math.atan2(-this.velocity.x, -this.velocity.z);
     else if (this.mode === 'fly') {
@@ -813,71 +917,211 @@ export class Player {
     let delta = ((targetYaw - this.group.rotation.y + Math.PI * 3) % TAU) - Math.PI;
     this.group.rotation.y += delta * Math.min(1, dt * 14);
 
+    const armPose = (arm, x, z, lowerX, lambda = 10) => {
+      arm.upper.rotation.x = damp(arm.upper.rotation.x, x, lambda, dt);
+      arm.upper.rotation.z = damp(arm.upper.rotation.z, z, lambda, dt);
+      arm.lower.rotation.x = damp(arm.lower.rotation.x, lowerX, lambda + 2, dt);
+    };
+    const legPose = (leg, x, lowerX, z = 0, lambda = 9) => {
+      leg.upper.rotation.x = damp(leg.upper.rotation.x, x, lambda, dt);
+      leg.upper.rotation.z = damp(leg.upper.rotation.z, z, lambda, dt);
+      leg.lower.rotation.x = damp(leg.lower.rotation.x, lowerX, lambda + 2, dt);
+    };
+
     const ground = this.onGround && this.mode !== 'fly';
-    if (ground) {
-      this.runPhase += dt * (4 + speed * 1.15);
-      const stride = clamp(speed / 10, 0, 1.25);
-      model.leftLeg.upper.rotation.x = Math.sin(this.runPhase) * 0.8 * stride;
-      model.rightLeg.upper.rotation.x = -Math.sin(this.runPhase) * 0.8 * stride;
-      model.leftLeg.lower.rotation.x = Math.max(0, -Math.sin(this.runPhase)) * 0.6 * stride;
-      model.rightLeg.lower.rotation.x = Math.max(0, Math.sin(this.runPhase)) * 0.6 * stride;
-      model.leftArm.upper.rotation.x = -Math.sin(this.runPhase) * 0.7 * stride;
-      model.rightArm.upper.rotation.x = Math.sin(this.runPhase) * 0.7 * stride;
-      model.leftArm.lower.rotation.x = 0.25 + Math.max(0, Math.sin(this.runPhase)) * 0.25;
-      model.rightArm.lower.rotation.x = 0.25 + Math.max(0, -Math.sin(this.runPhase)) * 0.25;
-      model.body.position.y = Math.abs(Math.sin(this.runPhase)) * 0.045 * stride;
-      model.group.rotation.x = damp(model.group.rotation.x, speed > 10 ? 0.09 : 0, 8, dt);
-      model.group.rotation.z = damp(model.group.rotation.z, 0, 8, dt);
+    let bob = 0;
+    let lean = -0.03;
+    let twist = 0;
+    let roll = 0;
+    let strafe = 0;
+
+    if (ground && speed < 0.7) {
+      const breathe = Math.sin(this.idlePhase * 2.1);
+      armPose(model.leftArm, 0.06 + breathe * 0.03, 0.07, 0.24 + breathe * 0.02, 5);
+      armPose(model.rightArm, 0.06 - breathe * 0.02, -0.07, 0.24 - breathe * 0.02, 5);
+      legPose(model.leftLeg, 0.02, 0.05, 0.03, 5);
+      legPose(model.rightLeg, -0.02, 0.05, -0.03, 5);
+      bob = breathe * 0.008;
+      lean = -0.02;
+      model.head.rotation.y = damp(model.head.rotation.y, Math.sin(this.idlePhase * 0.55) * 0.2, 3, dt);
+      model.head.rotation.x = damp(model.head.rotation.x, Math.sin(this.idlePhase * 0.37) * 0.06, 3, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, -0.01, 5, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, 0, 5, dt);
+    } else if (ground) {
+      const sprint = speed > 9;
+      this.runPhase += dt * (4.4 + speed * 1.45);
+      const stride = clamp(speed / (sprint ? 12 : 7), 0, 1.3);
+      const swing = Math.sin(this.runPhase);
+      const swing2 = Math.cos(this.runPhase);
+      legPose(model.leftLeg, swing * 0.86 * stride, Math.max(0, -swing) * 1.15 * stride + 0.06, 0, 13);
+      legPose(model.rightLeg, -swing * 0.86 * stride, Math.max(0, swing) * 1.15 * stride + 0.06, 0, 13);
+      armPose(model.leftArm, -swing * 0.66 * stride, 0.08, 0.3 + swing2 * 0.16, 12);
+      armPose(model.rightArm, swing * 0.66 * stride, -0.08, 0.3 - swing2 * 0.16, 12);
+      bob = Math.abs(swing) * (sprint ? 0.075 : 0.045) * stride;
+      lean = sprint ? -0.14 : -0.05;
+      twist = swing * (sprint ? 0.2 : 0.12) * stride;
+      model.head.rotation.y = damp(model.head.rotation.y, -twist * 0.7, 8, dt);
+      model.head.rotation.x = damp(model.head.rotation.x, sprint ? 0.08 : 0.02, 8, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, sprint ? -0.08 : -0.02, 8, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, -swing * 0.025 * stride, 8, dt);
+      this.stepTimer -= dt;
+      if (speed > 2.6 && this.stepTimer <= 0) {
+        this.stepTimer = clamp(0.4 - speed * 0.017, 0.14, 0.34);
+        this.callbacks.onFootstep?.(this.group.position, speed);
+      }
     } else if (this.mode === 'swing') {
+      const handUp = this.swingSide > 0 ? model.rightArm : model.leftArm;
+      const handOut = this.swingSide > 0 ? model.leftArm : model.rightArm;
+      const pump = Math.sin(this.swingTimer * 4.5);
       const side = this.keys.has('KeyA') ? -1 : this.keys.has('KeyD') ? 1 : 0;
-      model.leftLeg.upper.rotation.x = damp(model.leftLeg.upper.rotation.x, 0.5, 7, dt);
-      model.rightLeg.upper.rotation.x = damp(model.rightLeg.upper.rotation.x, -0.2, 7, dt);
-      model.leftLeg.lower.rotation.x = damp(model.leftLeg.lower.rotation.x, 0.8, 7, dt);
-      model.rightLeg.lower.rotation.x = damp(model.rightLeg.lower.rotation.x, 1.0, 7, dt);
-      model.leftArm.upper.rotation.x = damp(model.leftArm.upper.rotation.x, -0.8, 8, dt);
-      model.rightArm.upper.rotation.x = damp(model.rightArm.upper.rotation.x, -2.6, 10, dt);
-      model.leftArm.upper.rotation.z = damp(model.leftArm.upper.rotation.z, 0.4, 8, dt);
-      model.rightArm.upper.rotation.z = damp(model.rightArm.upper.rotation.z, -0.15, 8, dt);
-      model.leftArm.lower.rotation.x = damp(model.leftArm.lower.rotation.x, 0.2, 8, dt);
-      model.rightArm.lower.rotation.x = damp(model.rightArm.lower.rotation.x, 0, 8, dt);
-      model.body.position.y = 0;
-      model.group.rotation.x = damp(model.group.rotation.x, -0.12 + side * 0.04, 8, dt);
-      model.group.rotation.z = damp(model.group.rotation.z, -side * 0.2, 8, dt);
+      armPose(handUp, 2.72 + pump * 0.12, this.swingSide > 0 ? -0.18 : 0.18, 0.12, 12);
+      armPose(handOut, -0.5 + pump * 0.16, this.swingSide > 0 ? 0.5 : -0.5, 0.72, 9);
+      legPose(model.leftLeg, 0.62 + pump * 0.12, 1.0, 0.05, 7);
+      legPose(model.rightLeg, -0.22 - pump * 0.1, 0.82, -0.05, 7);
+      bob = 0;
+      lean = -0.18;
+      twist = this.swingSide * 0.28;
+      roll = -side * 0.22;
+      model.head.rotation.y = damp(model.head.rotation.y, -this.swingSide * 0.18, 6, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, -0.16 + side * 0.04, 8, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, roll, 8, dt);
+    } else if (this.mode === 'zip') {
+      const t = Math.min(1, this.zipTimer * 5);
+      armPose(model.leftArm, 1.52 + Math.sin(elapsed * 20) * 0.02, 0.16, 0.04, 16);
+      armPose(model.rightArm, 1.52 + Math.sin(elapsed * 20) * 0.02, -0.16, 0.04, 16);
+      legPose(model.leftLeg, -0.28, 0.12, 0.04, 10);
+      legPose(model.rightLeg, -0.34, 0.1, -0.04, 10);
+      lean = -0.2;
+      bob = 0;
+      model.group.rotation.x = damp(model.group.rotation.x, -0.72 * t, 12, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, 0, 10, dt);
     } else if (this.mode === 'fly') {
-      model.leftArm.upper.rotation.x = damp(model.leftArm.upper.rotation.x, 1.0, 6, dt);
-      model.rightArm.upper.rotation.x = damp(model.rightArm.upper.rotation.x, 1.0, 6, dt);
-      model.leftArm.upper.rotation.z = damp(model.leftArm.upper.rotation.z, 0.38, 6, dt);
-      model.rightArm.upper.rotation.z = damp(model.rightArm.upper.rotation.z, -0.38, 6, dt);
-      model.leftLeg.upper.rotation.x = damp(model.leftLeg.upper.rotation.x, 0.16, 5, dt);
-      model.rightLeg.upper.rotation.x = damp(model.rightLeg.upper.rotation.x, 0.22, 5, dt);
-      model.leftLeg.lower.rotation.x = damp(model.leftLeg.lower.rotation.x, 0.06, 5, dt);
-      model.rightLeg.lower.rotation.x = damp(model.rightLeg.lower.rotation.x, 0.12, 5, dt);
-      model.group.rotation.x = damp(model.group.rotation.x, -0.62, 4, dt);
-      model.group.rotation.z = damp(model.group.rotation.z, -this.moveDirection.dot(this.getRight()) * 0.25, 5, dt);
-      model.body.position.y = 0;
+      const boost = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+      strafe = this.moveDirection.dot(this.getRight());
+      const thrust = clamp(this.velocity.length() / (this.spaceMode ? 400 : 110), 0, 1);
+      armPose(model.leftArm, 1.28 - thrust * 0.24, 0.3 + (boost ? 0.14 : 0), 0.12, 7);
+      armPose(model.rightArm, 1.28 - thrust * 0.24, -0.3 - (boost ? 0.14 : 0), 0.12, 7);
+      legPose(model.leftLeg, -0.26 - thrust * 0.12, 0.1, 0.07, 6);
+      legPose(model.rightLeg, -0.32 - thrust * 0.12, 0.14, -0.07, 6);
+      bob = Math.sin(elapsed * 3.2) * (this.spaceMode ? 0.03 : 0.02);
+      lean = -0.08;
+      model.head.rotation.x = damp(model.head.rotation.x, -0.28, 6, dt);
+      model.head.rotation.y = damp(model.head.rotation.y, 0, 6, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, -0.7 - thrust * 0.16, 5, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, -strafe * 0.38 + Math.sin(elapsed * 1.7) * 0.02, 5, dt);
+    } else if (this.climbing) {
+      const climb = Math.sin(this.runPhase);
+      armPose(model.leftArm, 2.7 + climb * 0.55, 0.2, 0.35, 14);
+      armPose(model.rightArm, 2.7 - climb * 0.55, -0.2, 0.35, 14);
+      legPose(model.leftLeg, -0.25 + climb * 0.45, 0.5, 0.04, 12);
+      legPose(model.rightLeg, -0.25 - climb * 0.45, 0.5, -0.04, 12);
+      lean = -0.12;
+      bob = Math.abs(climb) * 0.02;
+      model.head.rotation.x = damp(model.head.rotation.x, -0.22, 8, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, -0.08, 8, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, 0, 8, dt);
     } else {
-      const airT = clamp(this.velocity.y * 0.03, -0.4, 0.5);
-      model.leftLeg.upper.rotation.x = damp(model.leftLeg.upper.rotation.x, 0.45 + airT, 6, dt);
-      model.rightLeg.upper.rotation.x = damp(model.rightLeg.upper.rotation.x, -0.3 + airT, 6, dt);
-      model.leftLeg.lower.rotation.x = damp(model.leftLeg.lower.rotation.x, 0.8, 6, dt);
-      model.rightLeg.lower.rotation.x = damp(model.rightLeg.lower.rotation.x, 0.6, 6, dt);
-      model.leftArm.upper.rotation.x = damp(model.leftArm.upper.rotation.x, -0.4, 6, dt);
-      model.rightArm.upper.rotation.x = damp(model.rightArm.upper.rotation.x, -0.4, 6, dt);
-      model.leftArm.lower.rotation.x = damp(model.leftArm.lower.rotation.x, 0.4, 6, dt);
-      model.rightArm.lower.rotation.x = damp(model.rightArm.lower.rotation.x, 0.4, 6, dt);
-      model.body.position.y = 0;
-      model.group.rotation.x = damp(model.group.rotation.x, -0.06, 6, dt);
-      model.group.rotation.z = damp(model.group.rotation.z, 0, 6, dt);
+      const falling = this.velocity.y < 0;
+      const airT = clamp(this.velocity.y * 0.025, -0.45, 0.45);
+      if (falling) {
+        armPose(model.leftArm, -0.66, 0.62, 0.28, 7);
+        armPose(model.rightArm, -0.66, -0.62, 0.28, 7);
+        legPose(model.leftLeg, 0.58 + airT, 0.82, 0.1, 7);
+        legPose(model.rightLeg, -0.42 + airT, 0.66, -0.1, 7);
+      } else {
+        armPose(model.leftArm, 0.42, 0.7, 0.42, 7);
+        armPose(model.rightArm, -0.9, -0.4, 0.22, 7);
+        legPose(model.leftLeg, 0.78 + airT, 1.05, 0.08, 7);
+        legPose(model.rightLeg, -0.5 + airT, 0.7, -0.08, 7);
+      }
+      strafe = this.moveDirection.dot(this.getRight());
+      bob = 0;
+      lean = -0.05;
+      model.head.rotation.x = damp(model.head.rotation.x, falling ? 0.08 : -0.06, 7, dt);
+      model.group.rotation.x = damp(model.group.rotation.x, -0.08, 7, dt);
+      model.group.rotation.z = damp(model.group.rotation.z, -strafe * 0.12, 7, dt);
     }
+
+    const crouch = this.landTimer > 0 ? Math.sin(clamp(this.landTimer / 0.34, 0, 1) * Math.PI) * 0.2 : 0;
+    if (crouch > 0) {
+      model.leftLeg.lower.rotation.x += crouch * 4;
+      model.rightLeg.lower.rotation.x += crouch * 4;
+      model.leftLeg.upper.rotation.x -= crouch * 1.2;
+      model.rightLeg.upper.rotation.x -= crouch * 1.2;
+    }
+    model.upperBody.rotation.x = damp(model.upperBody.rotation.x, lean, 10, dt);
+    model.upperBody.rotation.y = damp(model.upperBody.rotation.y, twist, 10, dt);
+    model.upperBody.rotation.z = damp(model.upperBody.rotation.z, 0, 10, dt);
+    model.body.position.y = damp(model.body.position.y, bob - crouch, 14, dt);
 
     if (this.attackAnim > 0) {
       const p = 1 - this.attackAnim / 0.22;
       model.rightArm.upper.rotation.x = -2.5 + Math.sin(p * Math.PI) * 1.2;
       model.rightArm.upper.rotation.z = -0.2;
+      model.upperBody.rotation.y = -0.3 * Math.sin(p * Math.PI);
     }
-    if (this.landTimer > 0) {
-      model.body.position.y = -0.1 * Math.sin((this.landTimer / 0.2) * Math.PI);
+
+    if (this.mantleTime > 0) {
+      const p = 1 - this.mantleTime / 0.42;
+      const lift = Math.sin(p * Math.PI);
+      model.leftArm.upper.rotation.x = 2.4 - p * 1.8;
+      model.rightArm.upper.rotation.x = 2.4 - p * 1.8;
+      model.leftArm.upper.rotation.z = 0.3;
+      model.rightArm.upper.rotation.z = -0.3;
+      model.body.position.y += lift * 0.12;
     }
+
+    if (this.releaseTimer > 0) {
+      const p = this.releaseTimer / 0.4;
+      model.leftArm.upper.rotation.x = -0.3 - p * 0.5;
+      model.rightArm.upper.rotation.x = -0.3 - p * 0.5;
+      model.leftArm.upper.rotation.z = 0.4 + p * 0.6;
+      model.rightArm.upper.rotation.z = -0.4 - p * 0.6;
+      model.leftLeg.upper.rotation.x = 0.2 + p * 0.3;
+      model.rightLeg.upper.rotation.x = -0.2 - p * 0.3;
+    }
+
+    if (this.flipTime > 0) {
+      const p = 1 - this.flipTime / this.flipDuration;
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      this.flipGroup.rotation.set(0, 0, 0);
+      if (this.flipKind === 'back') this.flipGroup.rotation.x = e * TAU;
+      else if (this.flipKind === 'front') this.flipGroup.rotation.x = -e * TAU;
+      else this.flipGroup.rotation.z = this.flipSide * e * TAU;
+      const tuck = Math.sin(p * Math.PI);
+      model.leftLeg.upper.rotation.x = -1.1 * tuck;
+      model.rightLeg.upper.rotation.x = -0.9 * tuck;
+      model.leftLeg.lower.rotation.x = 1.7 * tuck + 0.1;
+      model.rightLeg.lower.rotation.x = 1.7 * tuck + 0.1;
+      model.leftArm.upper.rotation.x = 1.5 * tuck;
+      model.rightArm.upper.rotation.x = 1.5 * tuck;
+      model.leftArm.upper.rotation.z = 0.4 * tuck;
+      model.rightArm.upper.rotation.z = -0.4 * tuck;
+      model.upperBody.rotation.y = 0;
+      model.body.position.y = 0;
+    } else if (this.rollTime > 0) {
+      const p = 1 - this.rollTime / this.rollDuration;
+      this.flipGroup.rotation.x = -p * TAU;
+      this.flipGroup.rotation.z = 0;
+      this.flipGroup.position.y = 0.95 - Math.sin(p * Math.PI) * 0.22;
+      model.leftLeg.upper.rotation.x = -1.3;
+      model.rightLeg.upper.rotation.x = -1.1;
+      model.leftLeg.lower.rotation.x = 1.8;
+      model.rightLeg.lower.rotation.x = 1.8;
+      model.leftArm.upper.rotation.x = 1.2;
+      model.rightArm.upper.rotation.x = 1.2;
+    } else {
+      if (Math.abs(this.flipGroup.rotation.x) > TAU * 0.85 || Math.abs(this.flipGroup.rotation.z) > TAU * 0.85) {
+        this.flipGroup.rotation.x = 0;
+        this.flipGroup.rotation.z = 0;
+      } else {
+        this.flipGroup.rotation.x = damp(this.flipGroup.rotation.x, 0, 14, dt);
+        this.flipGroup.rotation.z = damp(this.flipGroup.rotation.z, 0, 14, dt);
+      }
+      this.flipGroup.position.y = damp(this.flipGroup.position.y, 0.95, 12, dt);
+      this.flipGroup.rotation.y = 0;
+    }
+
     if (this.god) {
       for (const mat of Object.values(model.materials)) {
         mat.emissive?.setHex(0x5c3b00);
